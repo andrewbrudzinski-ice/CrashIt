@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import type { VehicleBuild } from '../../game/parts/types';
 import type { VehicleStats } from '../../game/vehicle/deriveStats';
 import type { CrashResult } from '../../game/crash/crashModel';
@@ -90,7 +91,16 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
       renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
       renderer.setSize(mount.clientWidth, mount.clientHeight);
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.05;
       mount.appendChild(renderer.domElement);
+
+      // ---- Image-based lighting: a soft studio env so metallic paint, chrome
+      // and glass pick up glossy reflections instead of reading flat/plastic. ----
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      const envRT = pmrem.fromScene(new RoomEnvironment(), 0.04);
+      scene.environment = envRT.texture;
+      cleanupFns.push(() => { envRT.dispose(); pmrem.dispose(); });
 
       // ---- Lights ----
       scene.add(new THREE.HemisphereLight(0xcfe6ff, 0x0a0d12, 1.1));
@@ -145,7 +155,18 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
       rec.bodies.forEach((b) => {
         const [L, H, W] = b.size;
         if (b.kind === 'chassis') {
-          const { group: g, deform } = buildCarMesh(chassisStyle, L, H, W, build.color, rec.wheelRadius, rec.wheelLocal);
+          const aeroSet = new Set(build.aero);
+          const aero = {
+            spoiler: aeroSet.has('aero.spoiler'),
+            wing: aeroSet.has('aero.wing') || aeroSet.has('aero.active'),
+            splitter: aeroSet.has('aero.splitter'),
+            diffuser: aeroSet.has('aero.diffuser'),
+          };
+          const sporty = chassisStyle === 'coupe' || chassisStyle === 'exotic';
+          const { group: g, deform } = buildCarMesh(chassisStyle, L, H, W, build.color, rec.wheelRadius, rec.wheelLocal, {
+            stripes: sporty || build.aero.length > 0,
+            aero,
+          });
           chassisDeform = deform;
           scene.add(g);
           bodyGroups.push(g);

@@ -15,7 +15,7 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 13
+## Current status: END OF SESSION 14
 
 The core game loop is **playable end to end** with real-time 3D physics + sound,
 a challenge campaign + daily challenge, a **credits economy (crash for cash → buy
@@ -312,7 +312,7 @@ later refinement.
 
 ---
 
-## Recommended next task (Session 14)
+## Recommended next task (Session 15)
 
 Pick one:
 
@@ -404,3 +404,13 @@ Recent Crashes → tap. WebGL + a user gesture (audio) required.
 - **Session 13**: Added **crash flourishes** — tumbling paint-coloured debris
   chunks, a rising/expanding smoke plume, and glass that frosts/shatters under
   heavy damage. All timeline-driven (scrub cleanly) and gated to severe crashes.
+- **Session 14**: **Vehicle style/character pass** so cars stop reading flat.
+  Added an image-based studio environment (`RoomEnvironment` + `PMREMGenerator`,
+  `scene.environment`) and ACES tone mapping to the 3D renderer, then upgraded
+  paint/glass/chrome to reflective `MeshPhysicalMaterial` with **clearcoat**
+  (glossy metallic car paint instead of matte plastic). Gave `buildCarMesh` an
+  opts object driving **racing centre-stripes**, **brake calipers + alloy rims**,
+  and **bolt-on aero** (rear wing / lip spoiler / front splitter / rear diffuser)
+  that reflect the build's installed `aero` parts; sporty chassis (coupe/exotic)
+  get stripes by default. Verified glossy paint + stripes + wing on a coupe and a
+  plain sedan in headless WebGL.

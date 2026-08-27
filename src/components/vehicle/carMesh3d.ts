@@ -23,19 +23,40 @@ function jitter(i: number): number {
   return (x - Math.floor(x)) - 0.5;
 }
 
-function makeMaterials(paintColor: string) {
+/** Pick a readable accent (racing-stripe / caliper) colour from the paint:
+ *  a bright complementary pop that stays legible on both light and dark paint. */
+function accentFrom(paint: THREE.Color): THREE.Color {
+  const hsl = { h: 0, s: 0, l: 0 };
+  paint.getHSL(hsl);
+  // Rotate hue, force it vivid and mid-bright regardless of the base tone.
+  return new THREE.Color().setHSL((hsl.h + 0.5) % 1, 0.85, 0.55);
+}
+
+function makeMaterials(paintColor: string, accentColor?: string) {
   const paint = new THREE.Color(paintColor);
+  const accent = accentColor ? new THREE.Color(accentColor) : accentFrom(paint);
   return {
-    paint: new THREE.MeshStandardMaterial({ color: paint, roughness: 0.34, metalness: 0.6 }),
-    paintDark: new THREE.MeshStandardMaterial({ color: paint.clone().multiplyScalar(0.45), roughness: 0.5, metalness: 0.5 }),
-    trim: new THREE.MeshStandardMaterial({ color: 0x14181d, roughness: 0.75, metalness: 0.2 }),
-    chrome: new THREE.MeshStandardMaterial({ color: 0xb7c0c9, roughness: 0.25, metalness: 0.95 }),
-    glass: new THREE.MeshStandardMaterial({ color: 0x0b1a24, roughness: 0.08, metalness: 0.5 }),
-    headlight: new THREE.MeshStandardMaterial({ color: 0xfff3cf, emissive: 0xfff0c0, emissiveIntensity: 0.9, roughness: 0.3 }),
-    taillight: new THREE.MeshStandardMaterial({ color: 0xff3324, emissive: 0xff2010, emissiveIntensity: 0.8, roughness: 0.4 }),
-    tyre: new THREE.MeshStandardMaterial({ color: 0x0b0d11, roughness: 0.9 }),
-    rim: new THREE.MeshStandardMaterial({ color: 0x2a3038, roughness: 0.35, metalness: 0.85 }),
-    trailer: new THREE.MeshStandardMaterial({ color: 0xdbe0e6, roughness: 0.5, metalness: 0.35 }),
+    // Metallic clearcoat car paint — reads glossy under the studio env map,
+    // with a lacquer coat over a coloured metallic base (not flat plastic).
+    paint: new THREE.MeshPhysicalMaterial({
+      color: paint, roughness: 0.32, metalness: 0.72,
+      clearcoat: 0.75, clearcoatRoughness: 0.22, envMapIntensity: 1.15,
+    }),
+    paintDark: new THREE.MeshStandardMaterial({ color: paint.clone().multiplyScalar(0.4), roughness: 0.55, metalness: 0.55 }),
+    accent: new THREE.MeshPhysicalMaterial({
+      color: accent, roughness: 0.3, metalness: 0.55, clearcoat: 0.6, clearcoatRoughness: 0.25, envMapIntensity: 1.1,
+    }),
+    caliper: new THREE.MeshStandardMaterial({ color: accent, roughness: 0.4, metalness: 0.4 }),
+    trim: new THREE.MeshStandardMaterial({ color: 0x14181d, roughness: 0.7, metalness: 0.35 }),
+    chrome: new THREE.MeshStandardMaterial({ color: 0xc2cbd4, roughness: 0.16, metalness: 1, envMapIntensity: 1.4 }),
+    glass: new THREE.MeshPhysicalMaterial({
+      color: 0x0b1a24, roughness: 0.05, metalness: 0, transmission: 0, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.6,
+    }),
+    headlight: new THREE.MeshStandardMaterial({ color: 0xfff3cf, emissive: 0xfff0c0, emissiveIntensity: 0.9, roughness: 0.2, metalness: 0.2 }),
+    taillight: new THREE.MeshStandardMaterial({ color: 0xff3324, emissive: 0xff2010, emissiveIntensity: 0.85, roughness: 0.3 }),
+    tyre: new THREE.MeshStandardMaterial({ color: 0x0b0d11, roughness: 0.88, metalness: 0.05 }),
+    rim: new THREE.MeshStandardMaterial({ color: 0x9aa4ae, roughness: 0.28, metalness: 0.95, envMapIntensity: 1.3 }),
+    trailer: new THREE.MeshStandardMaterial({ color: 0xdbe0e6, roughness: 0.45, metalness: 0.4, envMapIntensity: 1.1 }),
   };
 }
 type Mats = ReturnType<typeof makeMaterials>;
@@ -53,16 +74,29 @@ function makeWheel(r: number, mats: Mats): THREE.Group {
   const tyre = new THREE.Mesh(new THREE.CylinderGeometry(r, r, width, 20), mats.tyre);
   tyre.rotation.x = Math.PI / 2;
   w.add(tyre);
-  const rim = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.6, r * 0.6, width * 1.04, 6), mats.rim);
+  // Brake disc + accent caliper, tucked inside the rim on the outer face.
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.62, r * 0.62, width * 0.4, 16), mats.chrome);
+  disc.rotation.x = Math.PI / 2;
+  w.add(disc);
+  const caliper = new THREE.Mesh(new THREE.BoxGeometry(r * 0.18, r * 0.34, width * 0.6), mats.caliper);
+  caliper.position.set(0, r * 0.5, 0);
+  w.add(caliper);
+  // Alloy rim: a shallow dish plus multi-spoke face.
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.66, r * 0.66, width * 1.02, 24), mats.rim);
   rim.rotation.x = Math.PI / 2;
   w.add(rim);
-  // A few spokes on the outer face for a wheel-ish read.
+  const dish = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.7, r * 0.66, width * 0.2, 24), mats.tyre);
+  dish.rotation.x = Math.PI / 2;
+  dish.position.z = width * 0.5;
+  w.add(dish);
+  // Spokes on the outer face for a wheel-ish read.
   for (let i = 0; i < 5; i++) {
-    const spoke = new THREE.Mesh(new THREE.BoxGeometry(r * 1.0, r * 0.14, width * 0.5), mats.rim);
+    const spoke = new THREE.Mesh(new THREE.BoxGeometry(r * 1.1, r * 0.15, width * 0.42), mats.rim);
     spoke.rotation.z = (i / 5) * Math.PI;
+    spoke.position.z = width * 0.28;
     w.add(spoke);
   }
-  const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.16, r * 0.16, width * 1.1, 8), mats.chrome);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.18, r * 0.18, width * 1.14, 10), mats.chrome);
   hub.rotation.x = Math.PI / 2;
   w.add(hub);
   return w;
@@ -190,6 +224,49 @@ function addArches(group: THREE.Group, offsets: [number, number, number][], r: n
   }
 }
 
+/** Twin racing stripes running nose-to-tail over the centre of the body. */
+function addStripes(group: THREE.Group, style: SilhouetteStyle, mats: Mats, L: number, bodyH: number, W: number, reg: (o: THREE.Object3D, z: keyof BodyDamage) => void) {
+  const topY = bodyH * (style === 'suv' || style === 'van' || style === 'pickup' ? 0.72 : 0.6);
+  const stripeW = W * 0.1;
+  const gap = W * 0.14;
+  for (const s of [1, -1]) {
+    const stripe = box(L * 0.94, bodyH * 0.02, stripeW, mats.accent, 0, topY, s * gap * 0.5);
+    reg(add(group, stripe), 'roof');
+  }
+}
+
+/** Bolt-on aero: reflects the installed parts so a race build looks the part. */
+function addAero(
+  group: THREE.Group, mats: Mats, L: number, bodyH: number, W: number,
+  aero: { spoiler?: boolean; wing?: boolean; splitter?: boolean; diffuser?: boolean },
+  reg: (o: THREE.Object3D, z: keyof BodyDamage) => void,
+) {
+  const hx = L / 2, hz = W / 2;
+  const base = -bodyH * 0.5;
+  // Big fixed race wing wins over a lip spoiler if both somehow set.
+  if (aero.wing) {
+    const deckY = base + bodyH * 0.92;
+    for (const s of [1, -1]) {
+      add(group, box(L * 0.04, bodyH * 0.34, W * 0.05, mats.trim, -hx * 0.86, deckY - bodyH * 0.14, s * hz * 0.6));
+    }
+    const plane = box(L * 0.14, bodyH * 0.04, W * 1.04, mats.accent, -hx * 0.88, deckY + bodyH * 0.04, 0);
+    plane.rotation.z = -0.18;
+    reg(add(group, plane), 'rear');
+  } else if (aero.spoiler) {
+    // Ducktail lip on the rear deck.
+    reg(add(group, box(L * 0.1, bodyH * 0.06, W * 0.98, mats.paint, -hx * 0.84, base + bodyH * 0.7, 0)), 'rear');
+  }
+  if (aero.splitter) {
+    const blade = box(L * 0.12, bodyH * 0.03, W * 1.06, mats.trim, hx * 0.9, base + bodyH * 0.08, 0);
+    reg(add(group, blade), 'front');
+  }
+  if (aero.diffuser) {
+    for (let i = -2; i <= 2; i++) {
+      add(group, box(L * 0.08, bodyH * 0.16, W * 0.04, mats.trim, -hx * 0.9, base + bodyH * 0.14, i * W * 0.18));
+    }
+  }
+}
+
 /** Dedicated tractor + box-trailer semi. Returns null (crumple via details). */
 function buildSemi(group: THREE.Group, mats: Mats, L: number, bodyH: number, W: number, r: number, reg: (o: THREE.Object3D, z: keyof BodyDamage) => void) {
   const hx = L / 2, hz = W / 2;
@@ -245,6 +322,15 @@ function add<T extends THREE.Object3D>(group: THREE.Group, obj: T): T {
   return obj;
 }
 
+export interface CarMeshOpts {
+  /** Accent colour for stripes/calipers/wing (defaults to a complementary pop). */
+  accent?: string;
+  /** Paint centre-stripes (sporty look). */
+  stripes?: boolean;
+  /** Installed aero parts to render as bolt-ons. */
+  aero?: { spoiler?: boolean; wing?: boolean; splitter?: boolean; diffuser?: boolean };
+}
+
 export function buildCarMesh(
   style: SilhouetteStyle,
   L: number,
@@ -253,9 +339,10 @@ export function buildCarMesh(
   paintColor: string,
   wheelRadius: number,
   wheelOffsets: number[][],
+  opts: CarMeshOpts = {},
 ): { group: THREE.Group; deform: (damage: BodyDamage, t: number) => void } {
   const group = new THREE.Group();
-  const mats = makeMaterials(paintColor);
+  const mats = makeMaterials(paintColor, opts.accent);
   const details: Detail[] = [];
   const reg = (obj: THREE.Object3D, zone: keyof BodyDamage) => { details.push({ obj, base: obj.position.clone(), zone }); };
 
@@ -267,6 +354,8 @@ export function buildCarMesh(
     crumple = buildProfileBody(group, style, mats, L, bodyH, W, reg);
     addCommonDetails(group, style, mats, L, bodyH, W, reg);
     if (style === 'pickup') addBed(group, mats, L, bodyH, W, reg);
+    if (opts.stripes) addStripes(group, style, mats, L, bodyH, W, reg);
+    if (opts.aero) addAero(group, mats, L, bodyH, W, opts.aero, reg);
     const offs = wheelOffsets.map((o) => [o[0], o[1], o[2]] as [number, number, number]);
     addWheelsAt(group, offs, wheelRadius, mats);
     addArches(group, offs, wheelRadius, W, mats);
