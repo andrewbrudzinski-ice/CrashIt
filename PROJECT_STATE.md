@@ -15,16 +15,29 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 6
+## Current status: END OF SESSION 7
 
 The core game loop is **playable end to end with real-time 3D physics + sound, a
-challenge campaign, progression, a sandbox mode, and shareable builds + replays**:
+challenge campaign, progression, a sandbox mode, shareable builds + replays, and
+a properly shaped 3D vehicle**:
 
 **BUILD** (Garage + Builder) → **TEST** (scenario + params) → **CRASH**
 (3D Rapier sim, sound + cinematic + replay) → **ANALYZE** (engineering report) →
 **MODIFY** → **RUN AGAIN**, plus a **Goals** campaign that gates part unlocks,
 a **Sandbox** mode for absurd experiments, and **shareable build links + saved
 crash replays**.
+
+### New in Session 7 — shaped 3D vehicle (Phase 4 polish)
+- **`carMesh3d.ts`**: the crash vehicle is now a low-poly body **extruded from
+  the same silhouette profile** the 2.5D thumbnails use (`buildCarMesh`), so the
+  3D car matches its garage art — hood slope, glass greenhouse, sloped rear,
+  belt-line accents, hub-capped wheels. Chassis style comes from the build's
+  chassis id; opponent cars get a shaped sedan body too. Replaced the plain
+  boxes in `CrashSim3D`. Verified across chase & side cameras — clearly reads as
+  a real car now, no page errors.
+- **Still open**: reconcile the sim's measured `peakAccelG` into the report
+  (deferred — the analytical peak-G drives scoring, so it needs care) and give
+  wheels arch cut-outs.
 
 ### New in Session 6 — sharing & replays (Phase 13 + 24)
 - **Crash history** (persisted, capped 24): every crash snapshots its build +
@@ -187,7 +200,7 @@ later refinement.
 | 1 | Architecture & app shell | ✅ done |
 | 2 | Vehicle data model & garage | ✅ done |
 | 3 | Vehicle builder | ✅ done (polish later) |
-| 4 | Vehicle visualization | 🟨 2.5D side-profile + 3D box vehicle; body silhouette in 3D + damage states later |
+| 4 | Vehicle visualization | ✅ 2.5D thumbnails + shaped 3D body (extruded silhouette); damage-state morphing later |
 | 5 | Physics system (Rapier3D) | ✅ done — deterministic pre-sim |
 | 6 | Basic crash test | ✅ done (3D real-time, all 11 scenarios) |
 | 7 | Damage system | 🟨 model done; 3D crush is basic (scale); no debris |
@@ -204,7 +217,7 @@ later refinement.
 
 ---
 
-## Recommended next task (Session 7)
+## Recommended next task (Session 8)
 
 Pick one; all are self-contained:
 
@@ -213,20 +226,19 @@ Pick one; all are self-contained:
   params + goals from the date). Small, gives a reason to return.
 - **Settings screen** — global mute, reduce-motion, sandbox toggle, and a
   "reset progress" in one place (mute + sandbox currently live only in their
-  contexts). Add a nav/entry point (maybe a gear in the Garage header).
-- **Final polish & balancing (Phase 16)** — reconcile the sim's measured
-  `peakAccelG` into the report so the on-screen number matches the physics
-  watched; a real difficulty playtest of the tier-2/3 challenges; give the 3D
-  vehicle a proper body silhouette instead of a plain box (extrude the SVG
-  profile or add fenders/hood shaping).
+  contexts). Add a gear entry in the Garage header.
 - **Randomized events (Phase 25)** — wet track, crosswind, tyre blowout, brake
   fade as opt-in scenario modifiers, clearly flagged, feeding a seed into the
-  (currently deterministic) sim.
+  sim (add an optional seed param to `simulateCrash`).
+- **Balance + peak-G reconciliation** — thread the sim's measured `peakAccelG`
+  back through `onComplete` → report so the number matches the physics watched
+  (touches CrashSim3D/TestScreen/ReplayHost/CrashReport); difficulty-test the
+  tier-2/3 challenges.
 
 Before starting: `npm install`, `npm run dev`, open at 393×852. Smoke paths:
 (career) Goals → attempt → Build → Run → COMPLETE; (sandbox) Garage → Sandbox →
-New → Tuning → Crash; (share) crash once → Garage → 🔗 on a card → Copy Link,
-and Recent Crashes → tap to replay. WebGL + a user gesture (audio) required.
+New → Tuning → Crash; (share) crash → Garage → 🔗 → Copy Link, and Recent
+Crashes → tap to replay. WebGL + a user gesture (audio) required.
 
 ## Session log
 - **Session 1**: Scaffolded project; built app shell, parts DB, stat engine,
@@ -261,3 +273,7 @@ and Recent Crashes → tap to replay. WebGL + a user gesture (audio) required.
   deterministic re-sim); URL-hash build sharing (`shareCodec`) with an import
   prompt; and a screenshot-ready `ShareCard`. Verified the share→import and
   replay round-trips end-to-end in headless WebGL.
+- **Session 7**: Replaced the plain-box 3D crash vehicle with a **shaped body
+  extruded from the silhouette profile** (`carMesh3d.ts`) so the 3D car matches
+  its 2.5D thumbnail — hood, glass greenhouse, sloped rear, wheels. Chassis
+  style from the build; opponents shaped too. Verified in chase & side views.

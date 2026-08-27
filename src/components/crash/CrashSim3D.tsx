@@ -7,6 +7,8 @@ import type { Scenario, ScenarioConfig } from '../../game/scenarios/scenarios';
 import { initRapier, simulateCrash, type SimRecording } from '../../game/sim/crashSim';
 import { audio } from '../../game/audio/audio';
 import { useGame } from '../../state/store';
+import { buildCarMesh, addWheelMeshes } from '../vehicle/carMesh3d';
+import { CHASSIS_STYLE } from '../vehicle/silhouetteProfiles';
 import './crashSim3d.css';
 
 interface Props {
@@ -138,45 +140,26 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
       // ---- Dynamic body meshes ----
       const bodyGroups: THREE.Group[] = [];
       const bodyMain: (THREE.Mesh | null)[] = [];
+      const chassisStyle = CHASSIS_STYLE[build.parts.chassis ?? 'chassis.sedan'] ?? 'sedan';
       rec.bodies.forEach((b) => {
-        const g = new THREE.Group();
+        const [L, H, W] = b.size;
         if (b.kind === 'chassis') {
-          const [L, H, W] = b.size;
-          const paint = new THREE.MeshStandardMaterial({
-            color: new THREE.Color(build.color), roughness: 0.35, metalness: 0.6,
-          });
-          const body = new THREE.Mesh(new THREE.BoxGeometry(L, H, W), paint);
-          g.add(body);
+          const { group: g, body } = buildCarMesh(chassisStyle, L, H, W, build.color);
+          addWheelMeshes(g, rec.wheelLocal, rec.wheelRadius);
           bodyMain.push(body);
-          // cabin greenhouse
-          const glass = new THREE.MeshStandardMaterial({ color: 0x11202a, roughness: 0.1, metalness: 0.3 });
-          const cabin = new THREE.Mesh(new THREE.BoxGeometry(L * 0.5, 0.56, W * 0.86), glass);
-          cabin.position.set(-L * 0.05, H / 2 + 0.28, 0);
-          g.add(cabin);
-          // wheels
-          const wheelGeo = new THREE.CylinderGeometry(rec.wheelRadius, rec.wheelRadius, 0.24, 16);
-          const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0c0e12, roughness: 0.8 });
-          for (const [wx, wy, wz] of rec.wheelLocal) {
-            const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-            wheel.rotation.x = Math.PI / 2;
-            wheel.position.set(wx, wy, wz);
-            g.add(wheel);
-          }
+          scene.add(g);
+          bodyGroups.push(g);
         } else {
-          const [L, H, W] = b.size;
-          const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(b.color ?? '#c0392b'), roughness: 0.5, metalness: 0.4 });
-          const body = new THREE.Mesh(new THREE.BoxGeometry(L, H, W), mat);
-          g.add(body);
-          const cabin = new THREE.Mesh(
-            new THREE.BoxGeometry(L * 0.5, 0.5, W * 0.85),
-            new THREE.MeshStandardMaterial({ color: 0x11151b, roughness: 0.2 }),
-          );
-          cabin.position.y = H / 2 + 0.25;
-          g.add(cabin);
+          // Opponent vehicles: a shaped sedan body in their own colour.
+          const { group: g, body } = buildCarMesh('sedan', L, H, W, b.color ?? '#c0392b');
+          addWheelMeshes(g, [
+            [L * 0.32, -H * 0.5 + 0.18, W * 0.5], [L * 0.32, -H * 0.5 + 0.18, -W * 0.5],
+            [-L * 0.32, -H * 0.5 + 0.18, W * 0.5], [-L * 0.32, -H * 0.5 + 0.18, -W * 0.5],
+          ], 0.3);
           bodyMain.push(body);
+          scene.add(g);
+          bodyGroups.push(g);
         }
-        scene.add(g);
-        bodyGroups.push(g);
       });
 
       // Impact flash light
