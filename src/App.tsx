@@ -14,6 +14,7 @@ import './app/app.css';
 export function App() {
   const screen = useGame((s) => s.screen);
   const importBuild = useGame((s) => s.importBuild);
+  const reduceMotion = useGame((s) => s.settings.reduceMotion);
   const [shared, setShared] = useState<VehicleBuild | null>(null);
 
   // On first load, offer to import a build shared via URL hash.
@@ -24,7 +25,7 @@ export function App() {
   }, []);
 
   return (
-    <div className="app-frame">
+    <div className={`app-frame${reduceMotion ? ' reduce-motion' : ''}`}>
       <main className="app-main">
         {screen === 'garage' && <GarageScreen />}
         {screen === 'builder' && <BuilderScreen />}

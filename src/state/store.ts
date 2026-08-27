@@ -91,6 +91,8 @@ interface GameState {
   // --- settings ---
   setMuted: (m: boolean) => void;
   setSandbox: (s: boolean) => void;
+  setReduceMotion: (r: boolean) => void;
+  resetProgress: () => void;
 
   getBuild: (id: string | null) => VehicleBuild | undefined;
 }
@@ -252,6 +254,16 @@ export const useGame = create<GameState>()(
 
       setMuted: (m) => set((st) => ({ settings: { ...st.settings, muted: m } })),
       setSandbox: (s) => set((st) => ({ settings: { ...st.settings, sandbox: s } })),
+      setReduceMotion: (r) => set((st) => ({ settings: { ...st.settings, reduceMotion: r } })),
+
+      resetProgress: () =>
+        set({
+          challengeProgress: {},
+          unlockedParts: [],
+          crashHistory: [],
+          activeChallengeId: null,
+          replay: null,
+        }),
 
       getBuild: (id) => get().builds.find((b) => b.id === id),
     }),

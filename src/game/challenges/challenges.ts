@@ -1,5 +1,7 @@
 import type { VehicleStats } from '../vehicle/deriveStats';
 import type { CrashResult } from '../crash/crashModel';
+import { getScenario } from '../scenarios/scenarios';
+import { seedFrom, mulberry32 } from '../scenarios/conditions';
 import { kmhToMph } from '../../lib/format';
 
 /**
@@ -133,8 +135,62 @@ export const CHALLENGES: Challenge[] = [
 ];
 
 export const CHALLENGE_INDEX = new Map(CHALLENGES.map((c) => [c.id, c]));
+
+// ---- Daily challenge ----------------------------------------------------
+// A rotating challenge generated deterministically from the (UTC) date, so
+// everyone gets the same one each day. Not part of the unlock tree.
+
+const DAILY_POOL = ['frontal', 'offset', 'side', 'rear', 'braking', 'rollover', 'wall'];
+
+export function dailyIdFor(date = new Date()): string {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  return `daily-${y}${m}${d}`;
+}
+
+export function getDailyChallenge(date = new Date()): Challenge {
+  const id = dailyIdFor(date);
+  const rng = mulberry32(seedFrom(id));
+  const scenarioId = DAILY_POOL[Math.floor(rng() * DAILY_POOL.length)];
+  const scn = getScenario(scenarioId)!;
+
+  const params: Record<string, number> = {};
+  for (const p of scn.params) params[p.key] = p.default;
+  const speedParam = scn.params.find((p) => p.key === 'speed');
+  if (speedParam) {
+    const steps = Math.max(1, Math.floor((speedParam.max - speedParam.min) / speedParam.step));
+    // Bias toward the lower-mid range so it stays achievable.
+    params.speed = speedParam.min + Math.round(rng() * steps * 0.7) * speedParam.step;
+  }
+
+  const goals: ChallengeGoal[] = [];
+  if (scenarioId === 'braking') {
+    goals.push({ metric: 'brakingDistance', cmp: 'lte', target: 33 + Math.round(rng() * 10), label: 'Braking distance', unit: 'm' });
+  } else if (scenarioId === 'rollover') {
+    goals.push({ metric: 'survival', cmp: 'gte', target: 40 + Math.round(rng() * 15), label: 'Driver survives', unit: '%' });
+  } else {
+    goals.push({ metric: 'survival', cmp: 'gte', target: 45 + Math.round(rng() * 25), label: 'Driver survives', unit: '%' });
+  }
+  const twist = rng();
+  if (twist < 0.4) goals.push({ metric: 'cost', cmp: 'lte', target: 18000 + Math.round(rng() * 12) * 1000, label: 'Build cost', unit: '$' });
+  else if (twist < 0.7) goals.push({ metric: 'mass', cmp: 'lte', target: 1200 + Math.round(rng() * 8) * 100, label: 'Mass', unit: 'kg' });
+
+  return {
+    id, name: "Today's Test", icon: '📅',
+    brief: `${scn.name} — meet today's targets.`,
+    scenarioId, params, goals, tier: 0, startUnlocked: true,
+  };
+}
+
 export function getChallenge(id: string | null): Challenge | undefined {
-  return id ? CHALLENGE_INDEX.get(id) : undefined;
+  if (!id) return undefined;
+  if (id.startsWith('daily-')) {
+    const m = id.match(/^daily-(\d{4})(\d{2})(\d{2})$/);
+    if (m) return getDailyChallenge(new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])));
+    return getDailyChallenge();
+  }
+  return CHALLENGE_INDEX.get(id);
 }
 
 /** Read a goal metric's value from stats + result. */

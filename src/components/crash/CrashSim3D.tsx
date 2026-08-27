@@ -217,6 +217,7 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
 
       // Start engine + wind ambience (electric = different voice).
       audio.setMuted(useGame.getState().settings.muted);
+      const reduceMotion = useGame.getState().settings.reduceMotion;
       audio.startAmbient(stats.engineKind === 'electric');
       cleanupFns.push(() => audio.stopAmbient());
 
@@ -317,7 +318,7 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
           setTimeout(() => setFlash(false), 260);
           const intensity = Math.min(1, result.deformationPct / 100);
           audio.impact(intensity, { glass: result.deformationPct > 40, metal: result.peakDecelG > 20 });
-          shake = 0.5 + intensity * 0.7;
+          shake = reduceMotion ? 0 : 0.5 + intensity * 0.7;
           sparkAge = 0;
           setup.sparks.position.copy(setup.impactPos).add(new THREE.Vector3(r.bodies[0].size[0] * 0.4, 0.3, 0));
           setup.sparks.visible = true;

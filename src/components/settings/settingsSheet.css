@@ -1,0 +1,75 @@
+.settings-backdrop {
+  position: fixed;
+  top: 0; bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--app-max-w);
+  z-index: 180;
+  background: rgba(6, 8, 11, 0.7);
+  display: flex;
+  align-items: flex-end;
+  animation: settings-fade var(--dur-fast) var(--ease-out);
+}
+@keyframes settings-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.settings-sheet {
+  width: 100%;
+  background: var(--c-surface-1);
+  border-top: 1px solid var(--c-line);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  padding: 10px 18px calc(18px + var(--safe-bottom));
+  box-shadow: var(--shadow-3);
+  animation: settings-up var(--dur-med) var(--ease-out);
+  max-height: 90%;
+  overflow-y: auto;
+}
+@keyframes settings-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.settings-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--c-surface-4); margin: 0 auto 14px; }
+.settings-title { font-size: 20px; font-weight: 800; margin-bottom: 16px; }
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--c-line-soft);
+}
+.settings-row-text { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.settings-label { font-size: 15px; font-weight: 650; }
+.settings-desc { font-size: 12px; color: var(--c-text-faint); line-height: 1.35; }
+
+.settings-toggle {
+  flex: 0 0 auto;
+  width: 50px; height: 30px;
+  border-radius: var(--r-pill);
+  background: var(--c-surface-4);
+  border: 1px solid var(--c-line);
+  position: relative;
+  transition: background var(--dur-fast);
+}
+.settings-toggle[data-on='true'] { background: var(--c-hazard); border-color: transparent; }
+.settings-knob {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.settings-toggle[data-on='true'] .settings-knob { transform: translateX(20px); }
+
+.settings-divider { height: 1px; background: var(--c-line); margin: 8px 0; }
+
+.settings-reset { display: flex; align-items: center; gap: 14px; padding: 14px 0; }
+.settings-reset-btn { height: 40px; padding: 0 18px; flex: 0 0 auto; color: var(--c-red); }
+.settings-reset-confirm { display: flex; gap: 8px; flex: 0 0 auto; }
+.settings-reset-confirm .btn { height: 40px; padding: 0 14px; }
+.settings-danger { background: var(--c-red); color: #fff; }
+
+.settings-about {
+  font-size: 10.5px; color: var(--c-text-faint); text-align: center;
+  margin: 14px 0 16px; line-height: 1.4;
+}
+.settings-done { height: 48px; }

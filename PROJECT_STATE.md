@@ -15,17 +15,35 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 8
+## Current status: END OF SESSION 9
 
-The core game loop is **playable end to end with real-time 3D physics + sound, a
-challenge campaign, progression, a sandbox mode, shareable builds + replays, a
-shaped 3D vehicle, and environmental/random crash events**:
+The core game loop is **playable end to end** with real-time 3D physics + sound,
+a challenge campaign + daily challenge, progression, a sandbox mode, shareable
+builds + replays, a shaped 3D vehicle, environmental/random events, and a
+settings screen:
 
 **BUILD** (Garage + Builder) → **TEST** (scenario + params) → **CRASH**
 (3D Rapier sim, sound + cinematic + replay) → **ANALYZE** (engineering report) →
 **MODIFY** → **RUN AGAIN**, plus a **Goals** campaign that gates part unlocks,
 a **Sandbox** mode for absurd experiments, and **shareable build links + saved
 crash replays**.
+
+### New in Session 9 — daily challenge & settings (Phase 28 + polish)
+- **Daily challenge** (`getDailyChallenge` in `challenges.ts`): a rotating
+  challenge generated deterministically from the UTC date — scenario, speed, and
+  goals seeded via `seedFrom`/`mulberry32`. Pinned as a "Today's Test" card atop
+  the Goals screen; `getChallenge` resolves `daily-YYYYMMDD` ids so the normal
+  attempt/evaluate/complete flow works unchanged. Completion tracked separately
+  (dated id); no part reward.
+- **Settings sheet** (`SettingsSheet`, gear in the Garage header): Sound (mute),
+  **Reduce Motion**, Sandbox Mode, and Reset Progress (clears challenges +
+  crash history, keeps vehicles) with a confirm step and a "simulated, not a
+  safety tool" disclaimer.
+- **Reduce Motion wired at last**: `settings.reduceMotion` now adds a
+  `.reduce-motion` class on the app root (near-zeroes CSS transitions/animations)
+  and zeroes the 3D impact camera shake.
+- Verified in headless WebGL: daily card + detail + attempt button, settings
+  open, and the reduce-motion class toggling. No page errors.
 
 ### New in Session 8 — environmental / random events (Phase 25)
 - **`conditions.ts`**: 5 opt-in "simulation events" — Wet Track, Crosswind, Tire
@@ -233,33 +251,34 @@ later refinement.
 | 16 | Final polish & balancing | ⬜ |
 | 19 | Experiment / sandbox mode | ✅ done (mode toggle + tuning sliders) |
 | 25 | Randomized / environmental events | ✅ done (wet/wind/blowout/fade/uneven, seeded) |
+| 28 | Daily / special challenges | ✅ done (date-seeded daily challenge) |
 
 ---
 
-## Recommended next task (Session 9)
+## Recommended next task (Session 10)
 
-Pick one; all are self-contained:
+The brief is essentially fully implemented. Remaining polish, pick one:
 
-- **Daily challenge (Phase 28)** — one date-seeded rotating challenge pinned at
-  the top of the Goals screen; reuses the challenge engine + `seedFrom` (seed
-  the scenario, params, and any conditions from the date). Small, adds a reason
-  to return.
-- **Settings screen** — global mute, reduce-motion, sandbox toggle, and "reset
-  progress" in one place (mute + sandbox currently live only in their contexts).
-  Add a gear entry in the Garage header. `settings.reduceMotion` exists in the
-  store but isn't wired to anything yet.
 - **Balance + peak-G reconciliation** — thread the sim's measured `peakAccelG`
   back through `onComplete` → report so the number matches the physics watched
   (touches CrashSim3D/TestScreen/ReplayHost/CrashReport); difficulty-test the
-  tier-2/3 challenges.
+  tier-2/3 challenges with real builds.
 - **Debug/dev tools (Phase 30)** — a hidden dev overlay (gravity, time scale,
-  force-crash, show CoG/velocity vectors, hitboxes) gated behind a secret tap.
+  force-crash, show CoG/velocity vectors, hitboxes) gated behind a secret tap;
+  never exposed to normal users.
+- **Damage-state visuals** — morph/deform the 3D body mesh by the per-zone
+  damage map (front crumple, roof crush) instead of a uniform scale; add broken
+  glass / detached bumper bits.
+- **Leaderboards (Phase 21)** — needs a backend; out of scope until one exists.
+  Could stub a local "personal bests" board from `crashHistory` in the meantime.
+- **A README/landing polish + a session-start hook** so web sessions run
+  `npm ci && npm run build` checks automatically.
 
 Before starting: `npm install`, `npm run dev`, open at 393×852. Smoke paths:
-(career) Goals → attempt → Build → Run → COMPLETE; (sandbox) Garage → Sandbox →
-New → Tuning → Crash; (events) Crash → toggle Simulation Events → Crash; (share)
-crash → Garage → 🔗 → Copy Link, and Recent Crashes → tap to replay. WebGL + a
-user gesture (audio) required.
+(career) Goals → attempt → Build → Run → COMPLETE; (daily) Goals → Today's Test;
+(settings) Garage → gear → toggles; (sandbox) Garage → Sandbox → Tuning → Crash;
+(events) Crash → Simulation Events → Crash; (share) 🔗 → Copy Link; (replay)
+Recent Crashes → tap. WebGL + a user gesture (audio) required.
 
 ## Session log
 - **Session 1**: Scaffolded project; built app shell, parts DB, stat engine,
@@ -303,3 +322,7 @@ user gesture (audio) required.
   "Simulation Events" on the Test screen, applied through the crash model (wet
   grip) and the sim (forces/impulses/damping, gated to pre-impact), surfaced in
   the HUD and report, and stored in the run config for reproducible replays.
+- **Session 9**: Added a **date-seeded daily challenge** ("Today's Test" pinned
+  on Goals, resolved through `getChallenge`) and a **Settings sheet** (gear in
+  the Garage) for Sound / Reduce Motion / Sandbox / Reset Progress — finally
+  wiring `settings.reduceMotion` (CSS class + 3D shake gate).

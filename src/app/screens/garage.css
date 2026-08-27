@@ -155,6 +155,15 @@
 }
 .garage-action.danger { color: var(--c-red); }
 
+.garage-gear {
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  color: var(--c-text-dim);
+  border-radius: 50%;
+  margin-left: 8px;
+}
+.garage-gear:active { color: var(--c-text); }
+
 .garage-share {
   position: absolute;
   top: 10px;

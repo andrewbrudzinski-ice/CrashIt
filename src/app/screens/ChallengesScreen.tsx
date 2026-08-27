@@ -3,6 +3,8 @@ import { useGame } from '../../state/store';
 import {
   CHALLENGES,
   getChallenge,
+  getDailyChallenge,
+  dailyIdFor,
   isChallengeUnlocked,
   type Challenge,
 } from '../../game/challenges/challenges';
@@ -29,7 +31,9 @@ export function ChallengesScreen() {
   const [selected, setSelected] = useState<Challenge | null>(null);
 
   const completed = new Set(Object.keys(progress));
-  const doneCount = completed.size;
+  const doneCount = CHALLENGES.filter((c) => completed.has(c.id)).length;
+  const daily = getDailyChallenge();
+  const dailyRec = progress[dailyIdFor()];
 
   const attempt = (c: Challenge) => {
     let buildId = activeBuildId;
@@ -50,6 +54,21 @@ export function ChallengesScreen() {
       </header>
 
       <div className="screen-body">
+        {/* Daily challenge */}
+        <button className="ch-daily" data-done={!!dailyRec} onClick={() => setSelected(daily)}>
+          <div className="ch-daily-badge">TODAY’S TEST</div>
+          <div className="ch-daily-main">
+            <span className="ch-daily-icon">{getScenario(daily.scenarioId)?.icon}</span>
+            <div className="ch-daily-info">
+              <span className="ch-daily-name">{getScenario(daily.scenarioId)?.name}</span>
+              <span className="ch-daily-brief">
+                {daily.goals.map((g) => `${g.label} ${g.cmp === 'lte' ? '≤' : '≥'} ${g.unit === '$' ? '$' : ''}${g.target.toLocaleString('en-US')}${g.unit !== '$' ? g.unit : ''}`).join(' · ')}
+              </span>
+            </div>
+            {dailyRec ? <Stars n={dailyRec.stars} size={16} /> : <span className="ch-daily-go">▶</span>}
+          </div>
+        </button>
+
         <div className="ch-grid">
           {CHALLENGES.map((c) => {
             const unlocked = isChallengeUnlocked(c, completed);
