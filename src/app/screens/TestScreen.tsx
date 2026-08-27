@@ -10,6 +10,7 @@ import {
 } from '../../game/scenarios/scenarios';
 import { computeCrash, type CrashResult } from '../../game/crash/crashModel';
 import { getChallenge, evaluateChallenge, type ChallengeEval } from '../../game/challenges/challenges';
+import { audio } from '../../game/audio/audio';
 import { VehicleSilhouette } from '../../components/vehicle/VehicleSilhouette';
 import { CrashReport } from '../../components/crash/CrashReport';
 import { ChallengeResult } from '../../components/crash/ChallengeResult';
@@ -67,6 +68,7 @@ export function TestScreen() {
   const launch = () => {
     const r = computeCrash(stats, effConfig);
     if (!r) return;
+    audio.unlock(); // resume AudioContext within the user gesture
     setResult(r);
     setMode('running');
   };

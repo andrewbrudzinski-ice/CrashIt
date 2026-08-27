@@ -63,7 +63,16 @@
   pointer-events: none;
 }
 .sim3d-scn { font-size: 13px; font-weight: 700; color: var(--c-text); text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+.sim3d-hud-right { display: flex; align-items: center; gap: 10px; pointer-events: auto; }
 .sim3d-spd { font-size: 16px; font-weight: 800; color: var(--c-cyan); text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+.sim3d-mute {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(16, 20, 27, 0.7);
+  border: 1px solid var(--c-line);
+  backdrop-filter: blur(8px);
+  font-size: 15px;
+  display: grid; place-items: center;
+}
 
 .sim3d-cams {
   position: absolute;

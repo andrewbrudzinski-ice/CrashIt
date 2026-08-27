@@ -58,6 +58,7 @@ src/
     crash/crashModel.ts       Analytical crash → CrashResult (scored outcome)
     sim/crashSim.ts           Rapier3D pre-simulation → baked SimRecording
     challenges/challenges.ts  Challenge defs + evaluation + unlock mapping
+    audio/audio.ts            Procedural Web Audio engine (singleton)
   lib/format.ts               Display formatters + rating colors
 ```
 

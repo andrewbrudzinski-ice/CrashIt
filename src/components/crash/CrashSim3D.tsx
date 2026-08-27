@@ -5,6 +5,8 @@ import type { VehicleStats } from '../../game/vehicle/deriveStats';
 import type { CrashResult } from '../../game/crash/crashModel';
 import type { Scenario, ScenarioConfig } from '../../game/scenarios/scenarios';
 import { initRapier, simulateCrash, type SimRecording } from '../../game/sim/crashSim';
+import { audio } from '../../game/audio/audio';
+import { useGame } from '../../state/store';
 import './crashSim3d.css';
 
 interface Props {
@@ -39,6 +41,9 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
   const [cursor, setCursor] = useState(0); // frame index (for scrubber UI)
   const [hudSpeed, setHudSpeed] = useState(result.impactSpeedKmh);
   const [flash, setFlash] = useState(false);
+  const storeMuted = useGame((s) => s.settings.muted);
+  const setMutedStore = useGame((s) => s.setMuted);
+  const [muted, setMuted] = useState(storeMuted);
 
   // Imperative refs the animation loop reads (avoids re-renders per frame).
   const recRef = useRef<SimRecording | null>(null);
@@ -183,7 +188,58 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
       const impactPos = new THREE.Vector3();
       readPos(rec, rec.impactFrame, targetIdx, impactPos);
 
-      const setup = { scene, camera, renderer, bodyGroups, bodyMain, flashLight, targetIdx, impactPos };
+      // ---- Tyre skid marks: scan the recording for hard-decel frames and lay
+      // dark decals under the wheels, revealed as the cursor passes them. ----
+      const skidMeshes: { mesh: THREE.Mesh; frame: number }[] = [];
+      {
+        const skidMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4, depthWrite: false });
+        const p0 = new THREE.Vector3(), p1 = new THREE.Vector3();
+        for (let f = 2; f < rec.frameCount; f += 3) {
+          readPos(rec, f, targetIdx, p1);
+          readPos(rec, f - 2, targetIdx, p0);
+          const dv = (p0.distanceTo(p1) / (rec.dt * 2)) * 3.6; // km/h over the step
+          readPos(rec, f - 1, targetIdx, p0); // reuse for the frame before speed calc
+          const spd = p0.distanceTo(p1) / rec.dt * 3.6;
+          // decelerating fast & still moving → skid
+          if (spd > 6 && dv - spd > 3 && p1.y < 1.2) {
+            for (const [wx, , wz] of rec.wheelLocal) {
+              const mark = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.24), skidMat);
+              mark.rotation.x = -Math.PI / 2;
+              mark.position.set(p1.x + wx * 0.4, 0.012, p1.z + wz);
+              mark.visible = false;
+              scene.add(mark);
+              skidMeshes.push({ mesh: mark, frame: f });
+            }
+          }
+        }
+      }
+
+      // ---- Spark/debris burst emitted at impact (real-time transient). ----
+      const SPARKS = 40;
+      const sparkPos = new Float32Array(SPARKS * 3);
+      const sparkVel: THREE.Vector3[] = [];
+      for (let i = 0; i < SPARKS; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const el = Math.random() * Math.PI * 0.5;
+        const sp = 4 + Math.random() * 9;
+        sparkVel.push(new THREE.Vector3(Math.cos(a) * Math.cos(el) * sp, Math.sin(el) * sp + 3, Math.sin(a) * Math.cos(el) * sp));
+      }
+      const sparkGeo = new THREE.BufferGeometry();
+      sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+      const sparkMat = new THREE.PointsMaterial({ color: 0xffb24d, size: 0.22, transparent: true, opacity: 0 });
+      const sparks = new THREE.Points(sparkGeo, sparkMat);
+      sparks.visible = false;
+      scene.add(sparks);
+
+      // Start engine + wind ambience (electric = different voice).
+      audio.setMuted(useGame.getState().settings.muted);
+      audio.startAmbient(stats.engineKind === 'electric');
+      cleanupFns.push(() => audio.stopAmbient());
+
+      const setup = {
+        scene, camera, renderer, bodyGroups, bodyMain, flashLight, targetIdx, impactPos,
+        skidMeshes, sparks, sparkMat, sparkPos, sparkVel, sparkGeo,
+      };
 
       // ---- resize ----
       const onResize = () => {
@@ -202,8 +258,12 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
       const tmpPrev = new THREE.Vector3();
       const desiredCam = new THREE.Vector3();
       const q = new THREE.Quaternion();
+      const shakeVec = new THREE.Vector3();
       let last = performance.now();
       let flashedAt = -1;
+      let shake = 0;
+      let sparkAge = -1; // seconds since spark burst; <0 = inactive
+      let lastSpeed = result.impactSpeedKmh;
 
       const loop = () => {
         if (disposed) return;
@@ -246,22 +306,60 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
           setup.bodyMain[0].position.x = ((1 - crush) * r.bodies[0].size[0]) / 2; // keep rear fixed
         }
 
-        // HUD speed from frame delta of the target
+        // Speed & screech from frame delta of the target.
+        let spd = 0;
         if (f > 0) {
           readPos(r, f, setup.targetIdx, tmpTarget);
           readPos(r, f - 1, setup.targetIdx, tmpPrev);
-          const spd = tmpPrev.distanceTo(tmpTarget) / r.dt * 3.6;
+          spd = tmpPrev.distanceTo(tmpTarget) / r.dt * 3.6;
           if (playingRef.current) setHudSpeed(Math.round(spd));
         }
+        // Effective playback rate (for slow-mo engine pitch).
+        const distToImpactNow = Math.abs(cursorRef.current - r.impactFrame);
+        const effScale = speedRef.current * (distToImpactNow < 40 ? 0.18 : 1);
+        // Screech: hard deceleration while still rolling (braking / pre-impact).
+        const decel = Math.max(0, lastSpeed - spd);
+        lastSpeed = spd;
+        const screech = playingRef.current ? Math.min(1, (decel / 4) * (spd > 6 ? 1 : 0)) : 0;
+        audio.updateAmbient(playingRef.current ? spd : 0, effScale, screech);
 
-        // impact flash
+        // Reveal skid marks the cursor has passed.
+        for (const s of setup.skidMeshes) s.mesh.visible = f >= s.frame;
+
+        // impact flash + audio + sparks + camera shake
         if (flashedAt < 0 && cursorRef.current >= r.impactFrame && !r.clean) {
           flashedAt = now;
           setFlash(true);
           setTimeout(() => setFlash(false), 260);
+          const intensity = Math.min(1, result.deformationPct / 100);
+          audio.impact(intensity, { glass: result.deformationPct > 40, metal: result.peakDecelG > 20 });
+          shake = 0.5 + intensity * 0.7;
+          sparkAge = 0;
+          setup.sparks.position.copy(setup.impactPos).add(new THREE.Vector3(r.bodies[0].size[0] * 0.4, 0.3, 0));
+          setup.sparks.visible = true;
         }
         setup.flashLight.position.copy(setup.impactPos).add(new THREE.Vector3(0, 1.5, 0));
         setup.flashLight.intensity = flashedAt > 0 ? Math.max(0, 60 * (1 - (now - flashedAt) / 400)) : 0;
+
+        // Animate spark burst (real-time transient).
+        if (sparkAge >= 0) {
+          sparkAge += dtReal;
+          const life = 0.8;
+          if (sparkAge > life) {
+            setup.sparks.visible = false;
+            sparkAge = -1;
+          } else {
+            const arr = setup.sparkPos;
+            for (let i = 0; i < setup.sparkVel.length; i++) {
+              const v = setup.sparkVel[i];
+              arr[i * 3] = v.x * sparkAge;
+              arr[i * 3 + 1] = Math.max(-0.2, v.y * sparkAge - 9.8 * 0.5 * sparkAge * sparkAge);
+              arr[i * 3 + 2] = v.z * sparkAge;
+            }
+            setup.sparkGeo.attributes.position.needsUpdate = true;
+            setup.sparkMat.opacity = Math.max(0, 1 - sparkAge / life);
+          }
+        }
 
         // camera
         readPos(r, f, setup.targetIdx, tmpTarget);
@@ -273,6 +371,12 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
           desiredCam.copy(tmpTarget).add(CAM_OFFSET[mode]);
         }
         setup.camera.position.lerp(desiredCam, mode === 'top' ? 0.12 : 0.09);
+        // Impact camera shake (decays quickly).
+        if (shake > 0.001) {
+          shakeVec.set((Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)).multiplyScalar(shake);
+          setup.camera.position.add(shakeVec);
+          shake *= Math.pow(0.02, dtReal); // ~decay to near-zero in ~0.5s
+        }
         q.identity();
         setup.camera.lookAt(tmpTarget);
 
@@ -320,7 +424,21 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
       {/* Top HUD */}
       <div className="sim3d-hud">
         <span className="mono sim3d-scn">{scenario.icon} {scenario.name}</span>
-        {!result.survivedClean && <span className="mono sim3d-spd">{hudSpeed} km/h</span>}
+        <div className="sim3d-hud-right">
+          {!result.survivedClean && <span className="mono sim3d-spd">{hudSpeed} km/h</span>}
+          <button
+            className="sim3d-mute"
+            onClick={() => {
+              const m = !muted;
+              setMuted(m);
+              setMutedStore(m);
+              audio.setMuted(m);
+            }}
+            aria-label={muted ? 'Unmute' : 'Mute'}
+          >
+            {muted ? '🔇' : '🔊'}
+          </button>
+        </div>
       </div>
 
       {/* Camera modes */}

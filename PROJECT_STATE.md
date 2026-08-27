@@ -15,14 +15,28 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 3
+## Current status: END OF SESSION 4
 
-The core game loop is **playable end to end with real-time 3D physics, a
+The core game loop is **playable end to end with real-time 3D physics + sound, a
 challenge campaign, and progression**:
 
 **BUILD** (Garage + Builder) → **TEST** (scenario + params) → **CRASH**
-(3D Rapier sim, cinematic + replay) → **ANALYZE** (engineering report) →
+(3D Rapier sim, sound + cinematic + replay) → **ANALYZE** (engineering report) →
 **MODIFY** → **RUN AGAIN**, plus a **Goals** campaign that gates part unlocks.
+
+### New in Session 4 — audio & game feel (Phase 14 + polish)
+- **Procedural audio engine** (`src/game/audio/audio.ts`): one AudioContext,
+  master-gain mute, all voices synthesised (no asset files) — engine drone
+  (ICE vs. EV voices) & wind pitched to speed, tyre screech gated by
+  deceleration, and one-shot impact (low boom + noise crunch) with optional
+  glass shatter & metal groan scaled by crash severity. Unlocked on the launch
+  click gesture; honors `settings.muted`.
+- **3D game feel** in `CrashSim3D`: camera shake on impact (decaying), a
+  40-point spark/debris burst at the impact point, and tyre **skid marks** laid
+  on the ground during hard deceleration and revealed as the cursor passes.
+- **Mute toggle** (🔊/🔇) in the sim HUD, synced to the store setting.
+- Verified in headless WebGL (braking + frontal): AudioContext initializes, mute
+  button present, skid marks render, no page errors.
 
 ### New in Session 3 — challenges, progression & crash-model balancing (Phase 10 + 11)
 - **Challenge system** (`src/game/challenges/challenges.ts`): 8 data-driven
@@ -152,36 +166,38 @@ later refinement.
 | 11 | Progression / unlocks | ✅ done (part unlocks via challenges, gated builder) |
 | 12 | Persistence | 🟨 builds+settings+unlocks+challenge progress persisted; replays not stored |
 | 13 | Leaderboards / shareability | ⬜ (share codes generated, no UI/backend) |
-| 14 | Audio | ⬜ |
+| 14 | Audio | ✅ done (procedural engine/wind/screech/impact/glass/metal + mute) |
 | 15 | Mobile optimization | 🟨 mobile-first + lazy 3D chunk; perf pass on device later |
 | 16 | Final polish & balancing | ⬜ |
 
 ---
 
-## Recommended next task (Session 4)
+## Recommended next task (Session 5)
 
-**Sound + game feel (Phase 14 + polish)** — the crash is still silent, and this
-is now the biggest missing "oh my god" multiplier. Add a Web Audio architecture
-(procedural, no asset files): engine/EV whine pitched to speed, tire, wind,
-impact crunch, metal groan, glass; trigger the impact SFX off the sim
-`impactFrame`; honor `settings.muted`. Then add camera shake on impact, tire
-skid marks on the ground plane, and a simple debris/spark burst in 3D.
+Pick one; all are self-contained:
 
-Secondary polish, any of:
-- **Sandbox / Experiment mode (Phase 19)** — a toggle (already `settings.sandbox`
-  in the store) that ignores the budget and unlock gating; wire it into a garage
-  entry + builder so players can build ridiculous cars.
-- **Daily challenge (Phase 28)** — one rotating seeded challenge on the Goals
-  screen.
-- **Shareable build card + crash replay persistence (Phase 13 + 24)** — store
-  `SimRecording`/config so old crashes replay; a share card from the build.
-- Balance playtest: the challenge targets are first-pass; the deeper ones
-  (Featherweight, Stay Upright, The Fortress) need a real difficulty check, and
-  the sim's measured `peakAccelG` still isn't reconciled into the report.
+- **Sandbox / Experiment mode (Phase 19)** — `settings.sandbox` already exists in
+  the store; wire a garage/builder toggle that ignores budget + unlock gating so
+  players can build ridiculous cars (giant engine, tiny wheels, extreme CoG) and
+  crash them. High fun-per-effort.
+- **Shareable build card + crash replay persistence (Phase 13 + 24)** — persist
+  `SimRecording`/config (or just build+scenario, re-simmed deterministically) so
+  old crashes replay from the garage; generate a share card (name, key stats,
+  crash verdict) from the existing `shareCode`.
+- **Daily challenge (Phase 28)** — one date-seeded rotating challenge pinned on
+  the Goals screen.
+- **Settings screen + audio polish** — no settings screen exists; add one for
+  global mute, reduce-motion, and a sandbox toggle. Consider countdown blips and
+  a low-fuel/warning tone.
+
+Also outstanding (small): reconcile the sim's measured `peakAccelG` into the
+report so the on-screen number matches the physics watched; and a real
+difficulty playtest of the tier-2/3 challenges (Featherweight, Stay Upright,
+The Fortress).
 
 Before starting: `npm install`, `npm run dev`, open at 393×852. Smoke path:
-Goals → attempt a challenge → Build (note locked parts) → Run → 3D crash →
-CHALLENGE COMPLETE → reward unlock. WebGL required for the crash view.
+Goals → attempt a challenge → Build → Run → 3D crash (with sound) →
+CHALLENGE COMPLETE → reward unlock. WebGL + a user gesture (for audio) required.
 
 ## Session log
 - **Session 1**: Scaffolded project; built app shell, parts DB, stat engine,
@@ -201,3 +217,8 @@ CHALLENGE COMPLETE → reward unlock. WebGL required for the crash view.
   crash model (failure narration matches the numbers; rollover retuned so
   protection matters). Verified the full attempt→complete→unlock loop in
   headless WebGL.
+- **Session 4**: Added **procedural audio** (`game/audio/audio.ts`) — engine/EV
+  drone, wind, tyre screech, and impact/glass/metal one-shots, all synthesised,
+  wired into the 3D sim and unlocked on the launch gesture; a mute toggle synced
+  to the store. Added **3D game feel**: impact camera shake, a spark/debris
+  burst, and tyre skid marks. Verified render + audio init with no errors.
