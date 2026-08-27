@@ -92,7 +92,7 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
       renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
       renderer.setSize(mount.clientWidth, mount.clientHeight);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.05;
+      renderer.toneMappingExposure = 0.92;
       mount.appendChild(renderer.domElement);
 
       // ---- Image-based lighting: a soft studio env so metallic paint, chrome
@@ -162,9 +162,7 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
             splitter: aeroSet.has('aero.splitter'),
             diffuser: aeroSet.has('aero.diffuser'),
           };
-          const sporty = chassisStyle === 'coupe' || chassisStyle === 'exotic';
           const { group: g, deform } = buildCarMesh(chassisStyle, L, H, W, build.color, rec.wheelRadius, rec.wheelLocal, {
-            stripes: sporty || build.aero.length > 0,
             aero,
           });
           chassisDeform = deform;

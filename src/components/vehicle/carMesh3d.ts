@@ -39,8 +39,8 @@ function makeMaterials(paintColor: string, accentColor?: string) {
     // Metallic clearcoat car paint — reads glossy under the studio env map,
     // with a lacquer coat over a coloured metallic base (not flat plastic).
     paint: new THREE.MeshPhysicalMaterial({
-      color: paint, roughness: 0.32, metalness: 0.72,
-      clearcoat: 0.75, clearcoatRoughness: 0.22, envMapIntensity: 1.15,
+      color: paint, roughness: 0.48, metalness: 0.35,
+      clearcoat: 0.4, clearcoatRoughness: 0.35, envMapIntensity: 0.4,
     }),
     paintDark: new THREE.MeshStandardMaterial({ color: paint.clone().multiplyScalar(0.4), roughness: 0.55, metalness: 0.55 }),
     accent: new THREE.MeshPhysicalMaterial({
@@ -50,7 +50,7 @@ function makeMaterials(paintColor: string, accentColor?: string) {
     trim: new THREE.MeshStandardMaterial({ color: 0x14181d, roughness: 0.7, metalness: 0.35 }),
     chrome: new THREE.MeshStandardMaterial({ color: 0xc2cbd4, roughness: 0.16, metalness: 1, envMapIntensity: 1.4 }),
     glass: new THREE.MeshPhysicalMaterial({
-      color: 0x0b1a24, roughness: 0.05, metalness: 0, transmission: 0, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.6,
+      color: 0x070c11, roughness: 0.14, metalness: 0.1, clearcoat: 0.5, clearcoatRoughness: 0.12, envMapIntensity: 0.75,
     }),
     headlight: new THREE.MeshStandardMaterial({ color: 0xfff3cf, emissive: 0xfff0c0, emissiveIntensity: 0.9, roughness: 0.2, metalness: 0.2 }),
     taillight: new THREE.MeshStandardMaterial({ color: 0xff3324, emissive: 0xff2010, emissiveIntensity: 0.85, roughness: 0.3 }),
@@ -128,19 +128,21 @@ function smoothShape(pts: [number, number][], toX: (n: number) => number, toY: (
   return shape;
 }
 
-/** Round the extruded cross-section: crown at the beltline, tumblehome at the
- *  roof, a slight tuck at the sills — so the body is a rounded form, not a slab. */
-function crownGeometry(geo: THREE.BufferGeometry, belt = 0.46) {
+/** Shape the extruded cross-section like a real car: near-flat vertical door
+ *  sides through the middle, a rounded shoulder rolling into the roof
+ *  (tumblehome), and a small rocker tuck at the very bottom. NOT a round tube. */
+function crownGeometry(geo: THREE.BufferGeometry, shoulder = 0.62, topTaper = 0.5) {
   geo.computeBoundingBox();
   const bb = geo.boundingBox!;
   const y0 = bb.min.y, y1 = bb.max.y, span = Math.max(1e-4, y1 - y0);
+  const rocker = 0.12;
   const pos = geo.attributes.position.array as Float32Array;
   for (let i = 0; i < geo.attributes.position.count; i++) {
     const h = (pos[i * 3 + 1] - y0) / span;
-    let f: number;
-    if (h >= belt) { const t = (h - belt) / (1 - belt); f = 1 - 0.44 * Math.pow(t, 1.3); }
-    else { const t = (belt - h) / belt; f = 1 - 0.17 * Math.pow(t, 1.5); }
-    f *= 1 + 0.055 * (1 - Math.min(1, Math.abs(h - belt) / 0.26)); // door crown
+    let f = 1;
+    if (h > shoulder) { const t = (h - shoulder) / (1 - shoulder); f = 1 - topTaper * t * t; }
+    else if (h < rocker) { const t = (rocker - h) / rocker; f = 1 - 0.2 * t; }
+    else { f = 1 + 0.02 * (1 - Math.abs((h - (rocker + shoulder) / 2) / ((shoulder - rocker) / 2))); } // faint shoulder crown
     pos[i * 3 + 2] *= f;
   }
   geo.attributes.position.needsUpdate = true;
@@ -157,9 +159,9 @@ function buildProfileBody(
   const toY = (sy: number) => yBottom + sy * ySpan;
 
   const shape = smoothShape(sil.body, toX, toY, 96);
-  const bevel = Math.min(0.16, W * 0.12);
+  const bevel = Math.min(0.07, W * 0.055);
   const geo = new THREE.ExtrudeGeometry(shape, {
-    depth: W - bevel * 2, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, steps: 1, curveSegments: 24,
+    depth: W - bevel * 2, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, steps: 1, curveSegments: 24,
   });
   geo.translate(0, 0, -W / 2 + bevel);
   crownGeometry(geo);
@@ -167,15 +169,25 @@ function buildProfileBody(
   const body = new THREE.Mesh(geo, mats.paint);
   group.add(body);
 
-  // Glass greenhouse — narrower than the body (tumblehome) and softly rounded.
+  // Glass greenhouse — a flush, dark daylight-opening set well inside the
+  // shoulders (strong tumblehome), lightly rounded, no bubble.
   const gs = smoothShape(sil.glass, toX, toY, 48);
-  const gGeo = new THREE.ExtrudeGeometry(gs, { depth: W * 0.9, bevelEnabled: true, bevelThickness: W * 0.05, bevelSize: W * 0.05, bevelSegments: 2, steps: 1, curveSegments: 16 });
-  gGeo.translate(0, 0, -W * 0.45);
-  crownGeometry(gGeo, 0.5);
+  const gW = W * 0.86;
+  const gGeo = new THREE.ExtrudeGeometry(gs, { depth: gW, bevelEnabled: true, bevelThickness: W * 0.015, bevelSize: W * 0.015, bevelSegments: 1, steps: 1, curveSegments: 16 });
+  gGeo.translate(0, 0, -gW / 2);
+  crownGeometry(gGeo, 0.15, 0.55);
   gGeo.computeVertexNormals();
   const glass = new THREE.Mesh(gGeo, mats.glass);
   group.add(glass);
   reg(glass, 'roof');
+
+  // Floating roof: a body-colour cap over the top of the greenhouse so the
+  // roof reads as painted metal and the pillars blacken out (modern look).
+  const gxs = sil.glass.map((p) => toX(p[0]));
+  const gx0 = Math.min(...gxs), gx1 = Math.max(...gxs);
+  const gyTop = toY(Math.max(...sil.glass.map((p) => p[1])));
+  const roof = box((gx1 - gx0) * 0.9, bodyH * 0.06, gW * 0.9, mats.paint, (gx0 + gx1) / 2, gyTop, 0);
+  reg(add(group, roof), 'roof');
 
   const origPos = new Float32Array(geo.attributes.position.array as ArrayLike<number>);
   const hx = L / 2, hz = W / 2;
@@ -207,28 +219,33 @@ function addCommonDetails(
 ) {
   const hx = L / 2, hz = W / 2;
   const yBottom = -bodyH * 0.5;
-  const lightY = yBottom + bodyH * (style === 'suv' || style === 'van' || style === 'pickup' ? 0.5 : 0.42);
+  const tall = style === 'suv' || style === 'van' || style === 'pickup';
+  const beltY = yBottom + bodyH * (tall ? 0.5 : 0.42);
 
-  // Bumpers.
-  reg(add(group, box(L * 0.05, bodyH * 0.26, W * 1.02, mats.trim, hx * 0.98, yBottom + bodyH * 0.16, 0)), 'front');
-  reg(add(group, box(L * 0.05, bodyH * 0.24, W * 1.0, mats.trim, -hx * 0.98, yBottom + bodyH * 0.16, 0)), 'rear');
-  // Grille.
-  reg(add(group, box(L * 0.02, bodyH * 0.22, W * 0.55, mats.trim, hx * 0.99, yBottom + bodyH * 0.34, 0)), 'front');
-  // Head- & tail-lights (paired).
+  // --- Front fascia: body-colour cap, dark lower intake, slim LED headlights + DRL. ---
+  reg(add(group, box(L * 0.03, bodyH * 0.34, W * 0.98, mats.paint, hx * 0.99, yBottom + bodyH * 0.32, 0)), 'front');
+  reg(add(group, box(L * 0.035, bodyH * 0.16, W * 0.82, mats.trim, hx * 0.985, yBottom + bodyH * 0.13, 0)), 'front'); // lower intake
+  reg(add(group, box(L * 0.02, bodyH * 0.14, W * 0.42, mats.trim, hx * 0.995, beltY - bodyH * 0.04, 0)), 'front'); // slim grille
   for (const s of [1, -1]) {
-    reg(add(group, box(L * 0.03, bodyH * 0.14, W * 0.16, mats.headlight, hx * 0.97, lightY, s * hz * 0.72)), 'front');
-    reg(add(group, box(L * 0.025, bodyH * 0.12, W * 0.15, mats.taillight, -hx * 0.97, lightY, s * hz * 0.74)), 'rear');
+    // Wraparound headlight cluster + a thin DRL accent line beneath it.
+    reg(add(group, box(L * 0.02, bodyH * 0.09, W * 0.24, mats.headlight, hx * 0.995, beltY + bodyH * 0.02, s * hz * 0.62)), 'front');
+    reg(add(group, box(L * 0.015, bodyH * 0.025, W * 0.26, mats.headlight, hx * 1.0, beltY - bodyH * 0.06, s * hz * 0.6)), 'front');
   }
-  // Rocker panel (dark lower strip).
-  add(group, box(L * 0.9, bodyH * 0.14, W * 1.01, mats.paintDark, 0, yBottom + bodyH * 0.09, 0));
-  // Side mirrors near the A-pillar.
-  const mirrorX = hx * (style === 'coupe' || style === 'exotic' ? 0.15 : 0.28);
+
+  // --- Rear fascia: full-width LED light bar (the strongest modern cue) + valance. ---
+  reg(add(group, box(L * 0.02, bodyH * 0.06, W * 0.9, mats.taillight, -hx * 0.99, beltY + bodyH * 0.02, 0)), 'rear');
+  reg(add(group, box(L * 0.035, bodyH * 0.15, W * 0.8, mats.trim, -hx * 0.985, yBottom + bodyH * 0.12, 0)), 'rear'); // lower valance
+
+  // Rocker / lower-body cladding (dark), tucked in.
+  add(group, box(L * 0.86, bodyH * 0.13, W * 0.97, mats.paintDark, 0, yBottom + bodyH * 0.085, 0));
+  // Aero side-mirror caps on stalks near the A-pillar.
+  const mirrorX = hx * (style === 'coupe' || style === 'exotic' ? 0.14 : 0.26);
   for (const s of [1, -1]) {
-    add(group, box(L * 0.04, bodyH * 0.1, W * 0.06, mats.trim, mirrorX, yBottom + bodyH * 0.62, s * (hz + W * 0.06)));
+    add(group, box(L * 0.045, bodyH * 0.08, W * 0.05, mats.paint, mirrorX, yBottom + bodyH * 0.6, s * (hz + W * 0.05)));
   }
   // Roof rails for the tall wagons.
   if (style === 'suv' || style === 'van') {
-    for (const s of [1, -1]) add(group, box(L * 0.5, bodyH * 0.05, W * 0.05, mats.trim, -L * 0.05, bodyH * 0.98, s * hz * 0.7));
+    for (const s of [1, -1]) add(group, box(L * 0.5, bodyH * 0.04, W * 0.04, mats.trim, -L * 0.05, bodyH * 0.98, s * hz * 0.68));
   }
 }
 
@@ -245,15 +262,19 @@ function addBed(group: THREE.Group, mats: Mats, L: number, bodyH: number, W: num
   add(group, box(bedLen, bodyH * 0.05, W * 0.9, mats.paintDark, bedX, bedFloorY, 0)); // bed floor
 }
 
-/** Dark wheel-arch trims arcing over each wheel, on both body sides. */
+/** Flared body-colour wheel arches (with a dark cladding lip) over each wheel. */
 function addArches(group: THREE.Group, offsets: [number, number, number][], r: number, W: number, mats: Mats) {
   const hz = W / 2;
-  const geo = new THREE.TorusGeometry(r * 1.15, r * 0.11, 6, 12, Math.PI); // top-half ring in XY
+  const flare = new THREE.TorusGeometry(r * 1.24, r * 0.2, 8, 16, Math.PI);  // painted flare
+  const lip = new THREE.TorusGeometry(r * 1.26, r * 0.07, 6, 16, Math.PI);   // dark trim lip
   for (const [x, y] of offsets) {
     for (const s of [1, -1]) {
-      const arch = new THREE.Mesh(geo, mats.trim);
-      arch.position.set(x, y, s * hz);
-      group.add(arch);
+      const a = new THREE.Mesh(flare, mats.paint);
+      a.position.set(x, y, s * (hz - r * 0.08));
+      group.add(a);
+      const l = new THREE.Mesh(lip, mats.trim);
+      l.position.set(x, y, s * (hz + r * 0.02));
+      group.add(l);
     }
   }
 }
@@ -283,7 +304,7 @@ function addAero(
     for (const s of [1, -1]) {
       add(group, box(L * 0.04, bodyH * 0.34, W * 0.05, mats.trim, -hx * 0.86, deckY - bodyH * 0.14, s * hz * 0.6));
     }
-    const plane = box(L * 0.14, bodyH * 0.04, W * 1.04, mats.accent, -hx * 0.88, deckY + bodyH * 0.04, 0);
+    const plane = box(L * 0.14, bodyH * 0.04, W * 1.04, mats.trim, -hx * 0.88, deckY + bodyH * 0.04, 0);
     plane.rotation.z = -0.18;
     reg(add(group, plane), 'rear');
   } else if (aero.spoiler) {
@@ -390,9 +411,12 @@ export function buildCarMesh(
     if (style === 'pickup') addBed(group, mats, L, bodyH, W, reg);
     if (opts.stripes) addStripes(group, style, mats, L, bodyH, W, reg);
     if (opts.aero) addAero(group, mats, L, bodyH, W, opts.aero, reg);
-    const offs = wheelOffsets.map((o) => [o[0], o[1], o[2]] as [number, number, number]);
-    addWheelsAt(group, offs, wheelRadius, mats);
-    addArches(group, offs, wheelRadius, W, mats);
+    // Big wheels that fill the arches (modern proportions) — visual only, the
+    // physics wheels are separate colliders.
+    const vr = wheelRadius * 1.12;
+    const offs = wheelOffsets.map((o) => [o[0], o[1] - (vr - wheelRadius) * 0.5, o[2]] as [number, number, number]);
+    addWheelsAt(group, offs, vr, mats);
+    addArches(group, offs, vr, W, mats);
   }
 
   const glassBase = new THREE.Color(0x0b1a24);

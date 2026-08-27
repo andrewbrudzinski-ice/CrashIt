@@ -418,3 +418,15 @@ Recent Crashes → tap. WebGL + a user gesture (audio) required.
   tuck) so it's a curvy form rather than a flat slab, and the vertical edges use a
   real multi-segment bevel; the greenhouse is narrower and softly rounded.
   Verified glossy, rounded bodies on coupe/sedan/SUV in headless WebGL.
+- **Session 14 (cont.) — modern-car redesign**: the rounding read as a soft
+  "blob," so reshaped the mesh around real modern-car cues. The cross-section now
+  has **near-flat vertical door sides** with rounding only at the shoulder
+  (tumblehome into the roof) and a rocker tuck — not a round tube — with crisp
+  (small-bevel) edges. Added a **floating painted roof** over a flush **dark
+  tinted greenhouse**; **full-width LED rear light bar** + slim wraparound
+  headlights/DRLs; body-colour bumpers with dark lower intakes/valance;
+  **flared body-colour wheel arches** with **bigger wheels** that fill them; a
+  black-carbon look for the fixed wing; dropped the racing stripes for a clean
+  street look. Diagnosed and fixed a translucent "ghost canopy": the bright
+  studio env was over-reflecting on high clearcoat — calmed the paint
+  (envMapIntensity 0.4, clearcoat 0.4) and dropped exposure to 0.92.
