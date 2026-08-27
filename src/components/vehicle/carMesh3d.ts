@@ -111,6 +111,41 @@ function addWheelsAt(group: THREE.Group, positions: [number, number, number][], 
   }
 }
 
+/** Smooth a normalized outline into a rounded closed Shape (kills facets). */
+function smoothShape(pts: [number, number][], toX: (n: number) => number, toY: (n: number) => number, samples: number): THREE.Shape {
+  // Drop a duplicated closing point so the spline doesn't kink at the seam.
+  const src = pts.slice();
+  const a = src[0], b = src[src.length - 1];
+  if (src.length > 2 && Math.abs(a[0] - b[0]) < 1e-4 && Math.abs(a[1] - b[1]) < 1e-4) src.pop();
+  const v = src.map((p) => new THREE.Vector3(toX(p[0]), toY(p[1]), 0));
+  // Centripetal Catmull-Rom rounds the roof/hood without overshooting the
+  // steep nose and tail faces; closed so the underside seam is smooth too.
+  const curve = new THREE.CatmullRomCurve3(v, true, 'centripetal', 0.5);
+  const sampled = curve.getPoints(samples);
+  const shape = new THREE.Shape();
+  sampled.forEach((p, i) => (i === 0 ? shape.moveTo(p.x, p.y) : shape.lineTo(p.x, p.y)));
+  shape.closePath();
+  return shape;
+}
+
+/** Round the extruded cross-section: crown at the beltline, tumblehome at the
+ *  roof, a slight tuck at the sills — so the body is a rounded form, not a slab. */
+function crownGeometry(geo: THREE.BufferGeometry, belt = 0.46) {
+  geo.computeBoundingBox();
+  const bb = geo.boundingBox!;
+  const y0 = bb.min.y, y1 = bb.max.y, span = Math.max(1e-4, y1 - y0);
+  const pos = geo.attributes.position.array as Float32Array;
+  for (let i = 0; i < geo.attributes.position.count; i++) {
+    const h = (pos[i * 3 + 1] - y0) / span;
+    let f: number;
+    if (h >= belt) { const t = (h - belt) / (1 - belt); f = 1 - 0.44 * Math.pow(t, 1.3); }
+    else { const t = (belt - h) / belt; f = 1 - 0.17 * Math.pow(t, 1.5); }
+    f *= 1 + 0.055 * (1 - Math.min(1, Math.abs(h - belt) / 0.26)); // door crown
+    pos[i * 3 + 2] *= f;
+  }
+  geo.attributes.position.needsUpdate = true;
+}
+
 /** Extrude a normalized side profile into the deformable sheet-metal body. */
 function buildProfileBody(
   group: THREE.Group, style: SilhouetteStyle, mats: Mats, L: number, bodyH: number, W: number, reg: (o: THREE.Object3D, z: keyof BodyDamage) => void,
@@ -121,24 +156,23 @@ function buildProfileBody(
   const toX = (sx: number) => (0.5 - sx) * L;
   const toY = (sy: number) => yBottom + sy * ySpan;
 
-  const shape = new THREE.Shape();
-  sil.body.forEach((p, i) => (i === 0 ? shape.moveTo(toX(p[0]), toY(p[1])) : shape.lineTo(toX(p[0]), toY(p[1]))));
-  shape.closePath();
-  const bevel = Math.min(0.06, W * 0.04);
+  const shape = smoothShape(sil.body, toX, toY, 96);
+  const bevel = Math.min(0.16, W * 0.12);
   const geo = new THREE.ExtrudeGeometry(shape, {
-    depth: W - bevel * 2, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 1, steps: 1,
+    depth: W - bevel * 2, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, steps: 1, curveSegments: 24,
   });
   geo.translate(0, 0, -W / 2 + bevel);
+  crownGeometry(geo);
   geo.computeVertexNormals();
   const body = new THREE.Mesh(geo, mats.paint);
   group.add(body);
 
-  // Glass greenhouse, standing slightly proud of the sides; drops on roof crush.
-  const gs = new THREE.Shape();
-  sil.glass.forEach((p, i) => (i === 0 ? gs.moveTo(toX(p[0]), toY(p[1])) : gs.lineTo(toX(p[0]), toY(p[1]))));
-  gs.closePath();
-  const gGeo = new THREE.ExtrudeGeometry(gs, { depth: W * 1.02, bevelEnabled: false, steps: 1 });
-  gGeo.translate(0, 0, -W * 0.51);
+  // Glass greenhouse — narrower than the body (tumblehome) and softly rounded.
+  const gs = smoothShape(sil.glass, toX, toY, 48);
+  const gGeo = new THREE.ExtrudeGeometry(gs, { depth: W * 0.9, bevelEnabled: true, bevelThickness: W * 0.05, bevelSize: W * 0.05, bevelSegments: 2, steps: 1, curveSegments: 16 });
+  gGeo.translate(0, 0, -W * 0.45);
+  crownGeometry(gGeo, 0.5);
+  gGeo.computeVertexNormals();
   const glass = new THREE.Mesh(gGeo, mats.glass);
   group.add(glass);
   reg(glass, 'roof');

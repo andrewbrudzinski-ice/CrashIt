@@ -412,5 +412,9 @@ Recent Crashes → tap. WebGL + a user gesture (audio) required.
   opts object driving **racing centre-stripes**, **brake calipers + alloy rims**,
   and **bolt-on aero** (rear wing / lip spoiler / front splitter / rear diffuser)
   that reflect the build's installed `aero` parts; sporty chassis (coupe/exotic)
-  get stripes by default. Verified glossy paint + stripes + wing on a coupe and a
-  plain sedan in headless WebGL.
+  get stripes by default. Then **de-blocked the body shape**: the side profile is
+  now spline-smoothed (centripetal Catmull-Rom) instead of faceted, the extruded
+  cross-section gets a rounded crown (beltline bulge + roof tumblehome + sill
+  tuck) so it's a curvy form rather than a flat slab, and the vertical edges use a
+  real multi-segment bevel; the greenhouse is narrower and softly rounded.
+  Verified glossy, rounded bodies on coupe/sedan/SUV in headless WebGL.
