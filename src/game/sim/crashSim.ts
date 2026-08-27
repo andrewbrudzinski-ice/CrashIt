@@ -1,6 +1,7 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import type { VehicleStats } from '../vehicle/deriveStats';
 import { getScenario, type ScenarioConfig } from '../scenarios/scenarios';
+import { seedFrom, mulberry32 } from '../scenarios/conditions';
 
 /**
  * Deterministic 3D crash pre-simulation.
@@ -184,7 +185,7 @@ function dynamicCar(
   return rb;
 }
 
-function assemble(world: RAPIER.World, stats: VehicleStats, cfg: ScenarioConfig, kind: string, impactMs: number, clean: boolean) {
+function assemble(world: RAPIER.World, stats: VehicleStats, cfg: ScenarioConfig, kind: string, impactMs: number, clean: boolean, conds: Set<string>) {
   const props: PropDef[] = [];
   staticBox(world, 0, -1, 0, 200, 1, 60, Math.max(0.7, stats.tireGrip)); // ground
   props.push({ kind: 'ground', pos: [0, -1, 0], size: [400, 2, 120], color: '#12161d' });
@@ -259,7 +260,8 @@ function assemble(world: RAPIER.World, stats: VehicleStats, cfg: ScenarioConfig,
       const startX = -20;
       const rb = addChassis({ x: startX, y: rideY, z: 0 }, { x: impactMs, y: 0, z: 0 });
       // Exponential damping tuned so the car sheds speed over ~stopDist.
-      rb.setLinearDamping(impactMs / stopDist);
+      // Brake fade reduces the effective deceleration.
+      rb.setLinearDamping((impactMs / stopDist) * (conds.has('brakefade') ? 0.55 : 1));
       // Finish line marker on the road.
       prop('curb', startX + runway, 0.02, 0, 0.15, 0.02, 3.4, 0.9, undefined, '#e8edf4');
       if (!clean) prop('barrier', startX + runway + 0.6, 1.2, 0, 0.5, 1.4, 3.2, 0.8, undefined, '#8a9099');
@@ -279,17 +281,48 @@ export function simulateCrash(stats: VehicleStats, cfg: ScenarioConfig, clean: b
   const kind = scn?.kind ?? 'frontal';
   const impactMs = Math.max(1, (cfg.params.speed ?? 60) / 3.6);
 
+  // Environmental conditions & seeded random events (reproducible for replays).
+  const conds = new Set(cfg.conditions ?? []);
+  const seed = cfg.seed ?? seedFrom(cfg.scenarioId, Math.round(cfg.params.speed ?? 0), [...conds].join(','));
+  const rng = mulberry32(seed);
+  // Wet reduces grip → lower collider friction throughout.
+  const simStats: VehicleStats = conds.has('wet')
+    ? { ...stats, tireGrip: Math.max(0.2, stats.tireGrip * 0.55) }
+    : stats;
+
   const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
   world.timestep = DT;
-  const { tracked, chassis, cameraTarget, props } = assemble(world, stats, cfg, kind, impactMs, clean);
+  const { tracked, chassis, cameraTarget, props } = assemble(world, simStats, cfg, kind, impactMs, clean, conds);
 
   const n = tracked.length;
   const transforms = new Float32Array(MAX_FRAMES * n * FLOATS_PER_BODY);
 
+  // Dynamic-event parameters.
+  const mass = simStats.mass;
+  const windForce = conds.has('crosswind') ? mass * 2.6 * (rng() < 0.5 ? 1 : -1) : 0;
+  const blowout = conds.has('blowout');
+  const blowoutFrame = blowout ? 24 + Math.floor(rng() * 70) : -1;
+  const blowoutSide = rng() < 0.5 ? 1 : -1;
+  const uneven = conds.has('uneven');
+
   let prevV = Math.hypot(chassis.linvel().x, chassis.linvel().y, chassis.linvel().z);
   let peakAccel = 0, impactFrame = 0, impactSpeed = prevV, frameCount = 0, calm = 0;
+  // Environmental forces only apply while the car is still travelling freely —
+  // adding them after a hard impact makes the constraint solver eject the body.
+  let impacted = false;
 
   for (let f = 0; f < MAX_FRAMES; f++) {
+    // Apply continuous / event forces before stepping (pre-impact only).
+    if (!impacted) {
+      if (windForce) chassis.addForce({ x: 0, y: 0, z: windForce }, true);
+      if (uneven && f % 7 === 0) {
+        chassis.applyTorqueImpulse({ x: (rng() - 0.5) * mass * 0.02, y: 0, z: (rng() - 0.5) * mass * 0.02 }, true);
+      }
+      if (f === blowoutFrame) {
+        chassis.applyImpulse({ x: 0, y: 0, z: blowoutSide * mass * 2.2 }, true);
+        chassis.applyTorqueImpulse({ x: 0, y: blowoutSide * mass * 0.12, z: 0 }, true);
+      }
+    }
     world.step();
     frameCount++;
     for (let b = 0; b < n; b++) {
@@ -303,6 +336,7 @@ export function simulateCrash(stats: VehicleStats, cfg: ScenarioConfig, clean: b
     const v = Math.hypot(lv.x, lv.y, lv.z);
     const accel = Math.abs(v - prevV) / DT;
     if (accel > peakAccel) { peakAccel = accel; impactFrame = f; impactSpeed = prevV; }
+    if (accel > 90) impacted = true; // hard hit → stop applying event forces
     prevV = v;
     if (f > 60 && v < 0.6) { if (++calm > 45) break; } else calm = 0;
   }

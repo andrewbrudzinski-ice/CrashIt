@@ -9,6 +9,7 @@ import { audio } from '../../game/audio/audio';
 import { useGame } from '../../state/store';
 import { buildCarMesh, addWheelMeshes } from '../vehicle/carMesh3d';
 import { CHASSIS_STYLE } from '../vehicle/silhouetteProfiles';
+import { getCondition } from '../../game/scenarios/conditions';
 import './crashSim3d.css';
 
 interface Props {
@@ -295,7 +296,7 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
           readPos(r, f, setup.targetIdx, tmpTarget);
           readPos(r, f - 1, setup.targetIdx, tmpPrev);
           spd = tmpPrev.distanceTo(tmpTarget) / r.dt * 3.6;
-          if (playingRef.current) setHudSpeed(Math.round(spd));
+          if (playingRef.current) setHudSpeed(Math.min(999, Math.round(spd)));
         }
         // Effective playback rate (for slow-mo engine pitch).
         const distToImpactNow = Math.abs(cursorRef.current - r.impactFrame);
@@ -406,7 +407,12 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
 
       {/* Top HUD */}
       <div className="sim3d-hud">
-        <span className="mono sim3d-scn">{scenario.icon} {scenario.name}</span>
+        <span className="mono sim3d-scn">
+          {scenario.icon} {scenario.name}
+          {config.conditions?.map((id) => (
+            <span key={id} className="sim3d-cond" title={getCondition(id)?.name}>{getCondition(id)?.icon}</span>
+          ))}
+        </span>
         <div className="sim3d-hud-right">
           {!result.survivedClean && <span className="mono sim3d-spd">{hudSpeed} km/h</span>}
           <button

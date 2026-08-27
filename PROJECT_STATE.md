@@ -15,17 +15,35 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 7
+## Current status: END OF SESSION 8
 
 The core game loop is **playable end to end with real-time 3D physics + sound, a
-challenge campaign, progression, a sandbox mode, shareable builds + replays, and
-a properly shaped 3D vehicle**:
+challenge campaign, progression, a sandbox mode, shareable builds + replays, a
+shaped 3D vehicle, and environmental/random crash events**:
 
 **BUILD** (Garage + Builder) → **TEST** (scenario + params) → **CRASH**
 (3D Rapier sim, sound + cinematic + replay) → **ANALYZE** (engineering report) →
 **MODIFY** → **RUN AGAIN**, plus a **Goals** campaign that gates part unlocks,
 a **Sandbox** mode for absurd experiments, and **shareable build links + saved
 crash replays**.
+
+### New in Session 8 — environmental / random events (Phase 25)
+- **`conditions.ts`**: 5 opt-in "simulation events" — Wet Track, Crosswind, Tire
+  Blowout, Brake Fade, Uneven Surface — each with icon + description, clearly
+  flagged as simulation-only. A seeded PRNG (`mulberry32` + `seedFrom`) keeps
+  runs reproducible for replays.
+- **Scoring**: `wet` cleanly reduces grip (→ braking/survival) via
+  `conditionAdjustedStats`; all conditions add narrative notes to the report.
+- **Sim**: `simulateCrash` applies wet friction, a continuous crosswind force, a
+  seeded mid-run tire-blowout impulse, and brake-fade damping — all **gated to
+  the pre-impact phase** so added forces can't make the constraint solver eject
+  the wrecked car.
+- **UI**: a "Simulation Events" panel on the Test screen (toggle chips + 🎲
+  Randomize; career/sandbox only, challenges stay clean); active events show as
+  icons in the sim HUD and as notes in the report. Conditions + seed are stored
+  in the run config so replays reproduce exactly.
+- Verified: selection, sim application, HUD icons, report notes, and a
+  post-fix sane top speed (was a solver blow-up) in headless WebGL. No errors.
 
 ### New in Session 7 — shaped 3D vehicle (Phase 4 polish)
 - **`carMesh3d.ts`**: the crash vehicle is now a low-poly body **extruded from
@@ -214,31 +232,34 @@ later refinement.
 | 15 | Mobile optimization | 🟨 mobile-first + lazy 3D chunk; perf pass on device later |
 | 16 | Final polish & balancing | ⬜ |
 | 19 | Experiment / sandbox mode | ✅ done (mode toggle + tuning sliders) |
+| 25 | Randomized / environmental events | ✅ done (wet/wind/blowout/fade/uneven, seeded) |
 
 ---
 
-## Recommended next task (Session 8)
+## Recommended next task (Session 9)
 
 Pick one; all are self-contained:
 
 - **Daily challenge (Phase 28)** — one date-seeded rotating challenge pinned at
-  the top of the Goals screen; reuses the challenge engine (seed the scenario +
-  params + goals from the date). Small, gives a reason to return.
-- **Settings screen** — global mute, reduce-motion, sandbox toggle, and a
-  "reset progress" in one place (mute + sandbox currently live only in their
-  contexts). Add a gear entry in the Garage header.
-- **Randomized events (Phase 25)** — wet track, crosswind, tyre blowout, brake
-  fade as opt-in scenario modifiers, clearly flagged, feeding a seed into the
-  sim (add an optional seed param to `simulateCrash`).
+  the top of the Goals screen; reuses the challenge engine + `seedFrom` (seed
+  the scenario, params, and any conditions from the date). Small, adds a reason
+  to return.
+- **Settings screen** — global mute, reduce-motion, sandbox toggle, and "reset
+  progress" in one place (mute + sandbox currently live only in their contexts).
+  Add a gear entry in the Garage header. `settings.reduceMotion` exists in the
+  store but isn't wired to anything yet.
 - **Balance + peak-G reconciliation** — thread the sim's measured `peakAccelG`
   back through `onComplete` → report so the number matches the physics watched
   (touches CrashSim3D/TestScreen/ReplayHost/CrashReport); difficulty-test the
   tier-2/3 challenges.
+- **Debug/dev tools (Phase 30)** — a hidden dev overlay (gravity, time scale,
+  force-crash, show CoG/velocity vectors, hitboxes) gated behind a secret tap.
 
 Before starting: `npm install`, `npm run dev`, open at 393×852. Smoke paths:
 (career) Goals → attempt → Build → Run → COMPLETE; (sandbox) Garage → Sandbox →
-New → Tuning → Crash; (share) crash → Garage → 🔗 → Copy Link, and Recent
-Crashes → tap to replay. WebGL + a user gesture (audio) required.
+New → Tuning → Crash; (events) Crash → toggle Simulation Events → Crash; (share)
+crash → Garage → 🔗 → Copy Link, and Recent Crashes → tap to replay. WebGL + a
+user gesture (audio) required.
 
 ## Session log
 - **Session 1**: Scaffolded project; built app shell, parts DB, stat engine,
@@ -277,3 +298,8 @@ Crashes → tap to replay. WebGL + a user gesture (audio) required.
   extruded from the silhouette profile** (`carMesh3d.ts`) so the 3D car matches
   its 2.5D thumbnail — hood, glass greenhouse, sloped rear, wheels. Chassis
   style from the build; opponents shaped too. Verified in chase & side views.
+- **Session 8**: Added **environmental/random events** (`conditions.ts`) — wet
+  track, crosswind, tire blowout, brake fade, uneven surface — as opt-in seeded
+  "Simulation Events" on the Test screen, applied through the crash model (wet
+  grip) and the sim (forces/impulses/damping, gated to pre-impact), surfaced in
+  the HUD and report, and stored in the run config for reproducible replays.

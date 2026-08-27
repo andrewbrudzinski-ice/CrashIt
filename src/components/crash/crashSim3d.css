@@ -63,6 +63,7 @@
   pointer-events: none;
 }
 .sim3d-scn { font-size: 13px; font-weight: 700; color: var(--c-text); text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+.sim3d-cond { margin-left: 6px; font-size: 14px; }
 .sim3d-hud-right { display: flex; align-items: center; gap: 10px; pointer-events: auto; }
 .sim3d-spd { font-size: 16px; font-weight: 800; color: var(--c-cyan); text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
 .sim3d-mute {

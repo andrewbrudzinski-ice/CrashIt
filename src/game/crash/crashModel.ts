@@ -1,5 +1,6 @@
 import type { VehicleStats } from '../vehicle/deriveStats';
 import { getScenario, type ScenarioConfig, type ImpactAxis, type Scenario } from '../scenarios/scenarios';
+import { conditionAdjustedStats, conditionNotes } from '../scenarios/conditions';
 
 /**
  * Analytical crash model. Turns a vehicle's derived stats + a scenario into
@@ -263,11 +264,16 @@ function impactVelocity(scn: Scenario, cfg: ScenarioConfig, stats: VehicleStats)
   }
 }
 
-export function computeCrash(stats: VehicleStats, cfg: ScenarioConfig): CrashResult | null {
+export function computeCrash(rawStats: VehicleStats, cfg: ScenarioConfig): CrashResult | null {
   const scn = getScenario(cfg.scenarioId);
-  if (!scn || !stats.valid) return null;
+  if (!scn || !rawStats.valid) return null;
 
-  const { v, notes, clean } = impactVelocity(scn, cfg, stats);
+  // Environmental conditions (wet track etc.) adjust the scored stats.
+  const stats = conditionAdjustedStats(rawStats, cfg.conditions);
+  const condNotes = conditionNotes(cfg.conditions);
+
+  const { v, notes: baseNotes, clean } = impactVelocity(scn, cfg, stats);
+  const notes = [...baseNotes, ...condNotes];
   const energyKj = (0.5 * stats.mass * v * v) / 1000;
 
   // ---- Clean stop (braking success) ----

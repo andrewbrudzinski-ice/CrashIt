@@ -127,6 +127,10 @@ export function getScenario(id: string): Scenario | undefined {
 export interface ScenarioConfig {
   scenarioId: string;
   params: Record<string, number>;
+  /** Active environmental/random condition ids (see conditions.ts). */
+  conditions?: string[];
+  /** Deterministic seed for random events, so replays reproduce. */
+  seed?: number;
 }
 
 export function defaultConfig(s: Scenario): ScenarioConfig {

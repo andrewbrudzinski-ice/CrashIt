@@ -10,6 +10,7 @@ import {
 } from '../../game/scenarios/scenarios';
 import { computeCrash, type CrashResult } from '../../game/crash/crashModel';
 import { getChallenge, evaluateChallenge, type ChallengeEval } from '../../game/challenges/challenges';
+import { CONDITIONS, getCondition } from '../../game/scenarios/conditions';
 import { audio } from '../../game/audio/audio';
 import { VehicleSilhouette } from '../../components/vehicle/VehicleSilhouette';
 import { CrashReport } from '../../components/crash/CrashReport';
@@ -33,6 +34,8 @@ export function TestScreen() {
 
   const [scenarioId, setScenarioId] = useState<string>('frontal');
   const [config, setConfig] = useState<ScenarioConfig>(() => defaultConfig(SCENARIOS[0]));
+  const [conditions, setConditions] = useState<string[]>([]);
+  const [runConfig, setRunConfig] = useState<ScenarioConfig | null>(null);
   const [mode, setMode] = useState<Mode>('select');
   const [result, setResult] = useState<CrashResult | null>(null);
   const [challengeEval, setChallengeEval] = useState<ChallengeEval | null>(null);
@@ -66,16 +69,30 @@ export function TestScreen() {
     setConfig((c) => ({ ...c, params: { ...c.params, [key]: value } }));
   };
 
+  const toggleCondition = (id: string) =>
+    setConditions((cs) => (cs.includes(id) ? cs.filter((c) => c !== id) : [...cs, id]));
+  const randomizeConditions = () => {
+    const picked = CONDITIONS.filter(() => Math.random() < 0.4).map((c) => c.id);
+    setConditions(picked);
+  };
+
   const launch = () => {
-    const r = computeCrash(stats, effConfig);
+    // Fold conditions + a fresh seed into the run config (challenges stay clean).
+    const rc: ScenarioConfig = challenge
+      ? effConfig
+      : { ...config, conditions, seed: Math.floor(Math.random() * 1e9) };
+    const r = computeCrash(stats, rc);
     if (!r) return;
     audio.unlock(); // resume AudioContext within the user gesture
+    setRunConfig(rc);
     setResult(r);
     setMode('running');
   };
 
+  const activeConfig = runConfig ?? effConfig;
+
   const onSimComplete = () => {
-    if (result) recordCrash(build, effConfig, result);
+    if (result) recordCrash(build, activeConfig, result);
     if (challenge && result) {
       const ev = evaluateChallenge(challenge, stats, result);
       setChallengeEval(ev);
@@ -176,6 +193,36 @@ export function TestScreen() {
             </div>
           ))}
         </div>
+
+        {!challenge && (
+          <div className="card test-conditions">
+            <div className="test-cond-head">
+              <h3 className="test-h" style={{ margin: 0 }}>Simulation Events</h3>
+              <button className="test-cond-random" onClick={randomizeConditions}>🎲 Randomize</button>
+            </div>
+            <div className="test-cond-list">
+              {CONDITIONS.map((c) => {
+                const on = conditions.includes(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    className="cond-chip"
+                    data-active={on}
+                    onClick={() => toggleCondition(c.id)}
+                  >
+                    <span className="cond-icon">{c.icon}</span>
+                    <span className="cond-name">{c.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {conditions.length > 0 && (
+              <p className="test-cond-note">
+                {getCondition(conditions[0])?.desc}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Launch bar */}
@@ -191,7 +238,7 @@ export function TestScreen() {
             build={build}
             stats={stats}
             scenario={scenario}
-            config={effConfig}
+            config={activeConfig}
             result={result}
             onComplete={onSimComplete}
           />
@@ -205,7 +252,7 @@ export function TestScreen() {
           rewardGranted={rewardGranted}
           onReport={() => setMode('report')}
           onModify={() => { setMode('select'); setScreen('builder'); }}
-          onRetry={() => { const r = computeCrash(stats, effConfig); if (r) { setResult(r); setMode('running'); } }}
+          onRetry={() => { const r = computeCrash(stats, activeConfig); if (r) { setResult(r); setMode('running'); } }}
           onDone={() => { exitChallenge(); setMode('select'); setScreen('challenges'); }}
         />
       )}
@@ -215,7 +262,7 @@ export function TestScreen() {
           result={result}
           onClose={() => setMode(challenge ? 'challengeResult' : 'select')}
           onModify={() => { setMode('select'); setScreen('builder'); }}
-          onRerun={() => { const r = computeCrash(stats, effConfig); if (r) { setResult(r); setMode('running'); } }}
+          onRerun={() => { const r = computeCrash(stats, activeConfig); if (r) { setResult(r); setMode('running'); } }}
         />
       )}
     </div>
