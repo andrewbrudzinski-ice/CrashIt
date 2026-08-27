@@ -93,6 +93,20 @@ export const CHASSIS: Part[] = [
     },
   },
   {
+    id: 'chassis.semi',
+    name: 'Semi Tractor-Trailer',
+    category: 'chassis',
+    description: 'An articulated big rig. Colossal mass and length — it flattens whatever it hits, but stops and turns like a building.',
+    cost: 34000,
+    durability: 0.9,
+    tags: ['heavy'],
+    platform: {
+      baseMass: 12000, wheelbase: 6.0, trackWidth: 2.0, length: 15.0, height: 3.4,
+      baseRideHeight: 34, baseCogHeight: 150, baseWeightDist: 0.42, baseDrag: 0.65,
+      frontalArea: 8.5, baseChassisStrength: 130, seats: 2, baseCrumpleZone: 70,
+    },
+  },
+  {
     id: 'chassis.monocoque',
     name: 'Carbon Monocoque',
     category: 'chassis',

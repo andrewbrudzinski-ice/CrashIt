@@ -7,7 +7,7 @@ import type { Scenario, ScenarioConfig } from '../../game/scenarios/scenarios';
 import { initRapier, simulateCrash, type SimRecording } from '../../game/sim/crashSim';
 import { audio } from '../../game/audio/audio';
 import { useGame } from '../../state/store';
-import { buildCarMesh, addWheelMeshes } from '../vehicle/carMesh3d';
+import { buildCarMesh } from '../vehicle/carMesh3d';
 import { CHASSIS_STYLE } from '../vehicle/silhouetteProfiles';
 import { getCondition } from '../../game/scenarios/conditions';
 import './crashSim3d.css';
@@ -140,26 +140,22 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
 
       // ---- Dynamic body meshes ----
       const bodyGroups: THREE.Group[] = [];
-      const bodyMain: (THREE.Mesh | null)[] = [];
       const chassisStyle = CHASSIS_STYLE[build.parts.chassis ?? 'chassis.sedan'] ?? 'sedan';
       let chassisDeform: ((d: typeof result.damage, t: number) => void) | null = null;
       rec.bodies.forEach((b) => {
         const [L, H, W] = b.size;
         if (b.kind === 'chassis') {
-          const { group: g, body, deform } = buildCarMesh(chassisStyle, L, H, W, build.color);
-          addWheelMeshes(g, rec.wheelLocal, rec.wheelRadius);
+          const { group: g, deform } = buildCarMesh(chassisStyle, L, H, W, build.color, rec.wheelRadius, rec.wheelLocal);
           chassisDeform = deform;
-          bodyMain.push(body);
           scene.add(g);
           bodyGroups.push(g);
         } else {
           // Opponent vehicles: a shaped sedan body in their own colour.
-          const { group: g, body } = buildCarMesh('sedan', L, H, W, b.color ?? '#c0392b');
-          addWheelMeshes(g, [
-            [L * 0.32, -H * 0.5 + 0.18, W * 0.5], [L * 0.32, -H * 0.5 + 0.18, -W * 0.5],
-            [-L * 0.32, -H * 0.5 + 0.18, W * 0.5], [-L * 0.32, -H * 0.5 + 0.18, -W * 0.5],
-          ], 0.3);
-          bodyMain.push(body);
+          const oppWheels: number[][] = [
+            [L * 0.32, -H * 0.5 + 0.12, W * 0.5], [L * 0.32, -H * 0.5 + 0.12, -W * 0.5],
+            [-L * 0.32, -H * 0.5 + 0.12, W * 0.5], [-L * 0.32, -H * 0.5 + 0.12, -W * 0.5],
+          ];
+          const { group: g } = buildCarMesh('sedan', L, H, W, b.color ?? '#c0392b', 0.3, oppWheels);
           scene.add(g);
           bodyGroups.push(g);
         }
@@ -173,6 +169,9 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
       const targetIdx = Math.max(0, rec.bodies.findIndex((b) => b.id === rec.cameraTarget));
       const impactPos = new THREE.Vector3();
       readPos(rec, rec.impactFrame, targetIdx, impactPos);
+      // Pull the camera back for long/tall vehicles (e.g. a semi) so they frame.
+      const chassisLen = rec.bodies[0]?.size[0] ?? 4.7;
+      const camScale = Math.max(1, Math.min(3.4, chassisLen / 5));
 
       // ---- Tyre skid marks: scan the recording for hard-decel frames and lay
       // dark decals under the wheels, revealed as the cursor passes them. ----
@@ -224,7 +223,7 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
       cleanupFns.push(() => audio.stopAmbient());
 
       const setup = {
-        scene, camera, renderer, bodyGroups, bodyMain, flashLight, targetIdx, impactPos,
+        scene, camera, renderer, bodyGroups, flashLight, targetIdx, impactPos,
         skidMeshes, sparks, sparkMat, sparkPos, sparkVel, sparkGeo,
       };
 
@@ -350,10 +349,10 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
         readPos(r, f, setup.targetIdx, tmpTarget);
         const mode = camRef.current;
         if (mode === 'impact') {
-          desiredCam.copy(setup.impactPos).add(CAM_OFFSET.impact);
+          desiredCam.copy(CAM_OFFSET.impact).multiplyScalar(camScale).add(setup.impactPos);
           tmpTarget.copy(setup.impactPos);
         } else {
-          desiredCam.copy(tmpTarget).add(CAM_OFFSET[mode]);
+          desiredCam.copy(CAM_OFFSET[mode]).multiplyScalar(camScale).add(tmpTarget);
         }
         setup.camera.position.lerp(desiredCam, mode === 'top' ? 0.12 : 0.09);
         // Impact camera shake (decays quickly).

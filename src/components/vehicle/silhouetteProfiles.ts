@@ -3,6 +3,9 @@
  * control points in a 0..1 box (x = front→rear, y = ground→roof). The
  * renderer scales these to the vehicle's real length/height so a "lowered
  * sport" build actually sits lower than an SUV. Data, not drawing code.
+ *
+ * The 3D crash mesh (`carMesh3d.ts`) reads the same profiles, so the wrecked
+ * car matches its garage thumbnail.
  */
 export interface Silhouette {
   /** Outer body outline: front-lower → over the top → rear-lower. */
@@ -18,19 +21,20 @@ export interface Silhouette {
 }
 
 export type SilhouetteStyle =
-  | 'hatch' | 'sedan' | 'coupe' | 'suv' | 'truck' | 'van' | 'exotic';
+  | 'hatch' | 'sedan' | 'coupe' | 'suv' | 'pickup' | 'van' | 'semi' | 'exotic';
 
 export const CHASSIS_STYLE: Record<string, SilhouetteStyle> = {
   'chassis.compact': 'hatch',
   'chassis.sedan': 'sedan',
   'chassis.coupe': 'coupe',
   'chassis.suv': 'suv',
-  'chassis.truck': 'truck',
+  'chassis.truck': 'pickup',
   'chassis.van': 'van',
+  'chassis.semi': 'semi',
   'chassis.monocoque': 'exotic',
 };
 
-// Points go clockwise starting at the front bumper base.
+// Points go front→rear around the top of the body.
 export const SILHOUETTES: Record<SilhouetteStyle, Silhouette> = {
   hatch: {
     body: [
@@ -72,15 +76,16 @@ export const SILHOUETTES: Record<SilhouetteStyle, Silhouette> = {
     beltline: [[0.04, 0.6], [0.96, 0.66]],
     wheelR: 0.34,
   },
-  truck: {
+  pickup: {
+    // Cab up front (to ~0.58 x), then an open bed floor at belt height.
     body: [
-      [0.0, 0.22], [0.02, 0.56], [0.1, 0.64], [0.26, 0.68], [0.32, 0.98],
-      [0.52, 1.0], [0.56, 0.66], [0.98, 0.66], [1.0, 0.56], [1.0, 0.22],
+      [0.0, 0.18], [0.02, 0.46], [0.14, 0.52], [0.3, 0.56], [0.36, 0.9],
+      [0.55, 0.92], [0.57, 0.6], [0.98, 0.6], [1.0, 0.5], [1.0, 0.18],
     ],
-    glass: [[0.34, 0.95], [0.5, 0.97], [0.52, 0.7], [0.38, 0.68]],
+    glass: [[0.38, 0.87], [0.53, 0.89], [0.55, 0.64], [0.4, 0.62]],
     wheels: [0.2, 0.82],
-    beltline: [[0.04, 0.64], [0.55, 0.66]],
-    wheelR: 0.35,
+    beltline: [[0.04, 0.56], [0.57, 0.6]],
+    wheelR: 0.34,
   },
   van: {
     body: [
@@ -91,6 +96,17 @@ export const SILHOUETTES: Record<SilhouetteStyle, Silhouette> = {
     wheels: [0.16, 0.84],
     beltline: [[0.03, 0.66], [0.97, 0.7]],
     wheelR: 0.3,
+  },
+  semi: {
+    // Conventional tractor (long hood + tall cab) up front, box trailer behind.
+    body: [
+      [0.0, 0.2], [0.02, 0.55], [0.08, 0.58], [0.11, 0.95], [0.2, 1.0],
+      [0.22, 0.5], [0.26, 0.5], [0.26, 0.95], [1.0, 0.95], [1.0, 0.18],
+    ],
+    glass: [[0.12, 0.92], [0.19, 0.95], [0.2, 0.66], [0.12, 0.64]],
+    wheels: [0.13, 0.9],
+    beltline: [[0.26, 0.5], [1.0, 0.5]],
+    wheelR: 0.32,
   },
   exotic: {
     body: [

@@ -15,18 +15,33 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 10
+## Current status: END OF SESSION 11
 
 The core game loop is **playable end to end** with real-time 3D physics + sound,
 a challenge campaign + daily challenge, progression, a sandbox mode, shareable
-builds + replays, a shaped 3D vehicle that **crumples per the damage map**,
-environmental/random events, and a settings screen:
+builds + replays, **detailed 3D vehicles (8 distinct types incl. a semi) that
+crumple per the damage map**, environmental/random events, and a settings screen:
 
 **BUILD** (Garage + Builder) → **TEST** (scenario + params) → **CRASH**
 (3D Rapier sim, sound + cinematic + replay) → **ANALYZE** (engineering report) →
 **MODIFY** → **RUN AGAIN**, plus a **Goals** campaign that gates part unlocks,
 a **Sandbox** mode for absurd experiments, and **shareable build links + saved
 crash replays**.
+
+### New in Session 11 — detailed vehicles + a semi (Phase 4 visual, deep)
+- **`carMesh3d.ts` rebuilt** into a procedural vehicle builder that dresses the
+  extruded sheet-metal body with **bumpers, glowing head/tail-lights, a grille,
+  wheel-arch trims, side mirrors, a rocker line, and detailed rimmed wheels** —
+  so each car reads as a real (brand-neutral) vehicle.
+- **8 distinct types**: compact hatch, sedan, sport coupe, SUV, **pickup with an
+  open bed**, cargo van, exotic, and a new **Semi Tractor-Trailer** (dedicated
+  builder: long-hood tractor cab, twin exhaust stacks, fuel tank, box trailer,
+  and 5 axles). New `chassis.semi` part (15 m, 12 t, very tippy).
+- Camera now **auto-scales its distance to vehicle length** so a semi frames
+  correctly. Damage crumple still works (main body vertices + detail parts move
+  by zone).
+- Verified sedan / pickup / semi in headless WebGL — all clearly distinct and
+  car-like, no page errors.
 
 ### New in Session 10 — damage-state mesh deformation (Phase 7 visual)
 - **`buildCarMesh` now returns a `deform(damage, t)` closure** that crumples the
@@ -267,29 +282,28 @@ later refinement.
 
 ---
 
-## Recommended next task (Session 11)
+## Recommended next task (Session 12)
 
-The brief is essentially fully implemented and polished. Remaining, pick one:
+Pick one:
 
-- **Debug/dev tools (Phase 30)** — a hidden dev overlay (gravity, time scale,
-  force-crash, show CoG/velocity vectors, hitboxes) gated behind a secret tap;
-  never exposed to normal users.
-- **Local "personal bests" board** — a leaderboard-style screen derived from
-  `crashHistory` (safest, fastest, cheapest, biggest impact) since real
-  server-side leaderboards (Phase 21) need a backend that doesn't exist.
+- **Make the Semi reachable in career** — it's `chassis.semi` (not
+  `startUnlocked`), so it's only usable in Sandbox today. Add a challenge that
+  rewards it (or a "heavy vehicles" unlock), and consider a matching new
+  scenario (e.g. it as the oncoming mass in head-on / multi-car).
+- **Front-detail flourishes on crash** — detach a bumper/wheel on severe front
+  damage; crack/darken the glass on roof/front crush; a lingering smoke puff.
+- **Debug/dev tools (Phase 30)** — hidden dev overlay (gravity, time scale,
+  force-crash, CoG/velocity vectors, hitboxes) behind a secret tap.
+- **Local "personal bests" board** from `crashHistory` (safest/fastest/cheapest/
+  biggest impact) — real leaderboards (Phase 21) still need a backend.
 - **Balance + peak-G reconciliation** — thread the sim's measured `peakAccelG`
-  back through `onComplete` → report so the number matches the physics watched;
-  difficulty-test the tier-2/3 challenges with real builds.
-- **Session-start hook + README/landing polish** so web sessions auto-run
-  `npm ci` + build/typecheck checks (see the `session-start-hook` skill).
-- **More crumple polish** — detach a bumper/wheel mesh on severe front damage;
-  crack/darken the glass greenhouse on roof/front crush.
+  into the report; difficulty-test tier-2/3 challenges.
 
 Before starting: `npm install`, `npm run dev`, open at 393×852. Smoke paths:
-(career) Goals → attempt → Build → Run → COMPLETE (watch it crumple!); (daily)
-Goals → Today's Test; (settings) Garage → gear; (sandbox) Garage → Sandbox →
-Tuning → Crash; (events) Crash → Simulation Events; (share) 🔗 → Copy Link;
-(replay) Recent Crashes → tap. WebGL + a user gesture (audio) required.
+(vehicles) Garage → Sandbox → New → pick a chassis (try Semi) → Crash → SIDE cam;
+(career) Goals → attempt → Build → Run; (daily) Goals → Today's Test; (settings)
+Garage gear; (events) Crash → Simulation Events; (share) 🔗 → Copy Link; (replay)
+Recent Crashes → tap. WebGL + a user gesture (audio) required.
 
 ## Session log
 - **Session 1**: Scaffolded project; built app shell, parts DB, stat engine,
@@ -342,3 +356,8 @@ Tuning → Crash; (events) Crash → Simulation Events; (share) 🔗 → Copy Li
   toward the damaged zones (front/rear/side/roof) with crumpled-metal jitter,
   driven from `result.damage` as the scrub cursor passes impact. The 3D car now
   visibly wrecks and un-wrecks with the timeline.
+- **Session 11**: Deep **vehicle look pass** — rebuilt `carMesh3d.ts` so cars
+  carry real details (bumpers, glowing lights, grille, arches, mirrors, rimmed
+  wheels), added a proper **pickup (open bed)** and a new **Semi Tractor-Trailer**
+  (tractor cab + stacks + fuel tank + box trailer + 5 axles; new `chassis.semi`),
+  and made the crash camera auto-scale to vehicle length. 8 distinct types now.
