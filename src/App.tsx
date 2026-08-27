@@ -4,6 +4,7 @@ import { GarageScreen } from './app/screens/GarageScreen';
 import { BuilderScreen } from './app/screens/BuilderScreen';
 import { TestScreen } from './app/screens/TestScreen';
 import { LabScreen } from './app/screens/LabScreen';
+import { ChallengesScreen } from './app/screens/ChallengesScreen';
 import './app/app.css';
 
 export function App() {
@@ -16,6 +17,7 @@ export function App() {
         {screen === 'builder' && <BuilderScreen />}
         {screen === 'test' && <TestScreen />}
         {screen === 'lab' && <LabScreen />}
+        {screen === 'challenges' && <ChallengesScreen />}
       </main>
       <BottomNav />
     </div>

@@ -128,7 +128,9 @@ function solveImpact(
     crushUsedM: maxCrush,
     deformationPct: 100,
     intrusionM: intrusion,
-    structureFailed: intrusion > 0.12,
+    // A fully-deployed crumple zone is doing its job; only a genuinely deep
+    // cabin intrusion (>18 cm) counts as a structural failure.
+    structureFailed: intrusion > 0.18,
   };
 }
 
@@ -287,17 +289,24 @@ export function computeCrash(stats: VehicleStats, cfg: ScenarioConfig): CrashRes
     const radius = Math.max(6, stats.wheelbase / Math.tan(turn));
     const lateralG = (v * v) / (radius * G);
     const rolls = lateralG > stats.rolloverThreshold;
-    const excess = clamp((lateralG - stats.rolloverThreshold) / stats.rolloverThreshold, 0, 3);
-    const rollCount = rolls ? Math.max(1, Math.round(excess * 2.2)) : 0;
-    const base = rolls ? clamp(30 + excess * 35 - stats.rolloverProtection * 25, 0, 100) : clamp(lateralG * 20, 0, 40);
+    const excess = clamp((lateralG - stats.rolloverThreshold) / Math.max(0.3, stats.rolloverThreshold), 0, 2.5);
+    const rollCount = rolls ? Math.max(1, Math.round(1 + excess * 1.3)) : 0;
+    // Roof-crush severity: rollover protection & cabin strength are what save you.
+    const base = rolls
+      ? clamp(16 + excess * 16 - stats.rolloverProtection * 38 - Math.max(0, stats.cabinStrength - 30) * 0.25, 4, 100)
+      : clamp(lateralG * 18, 0, 35);
     const damage = distributeDamage(base, 'roof', stats);
     damage.roof = base;
     damage.wheels = clamp(base * 0.6, 0, 100);
-    const peakG = rolls ? clamp(12 + excess * 14, 0, 60) : lateralG;
-    const occ = occupantForces(peakG, stats.restraint, damage.cabinIntrusion / 100, 'roof');
+    const peakG = rolls ? clamp(9 + excess * 8, 0, 45) : lateralG;
+    const occ = occupantForces(peakG, stats.restraint, base / 300, 'roof');
+    // Rollover lethality is about roof crush & ejection (protection), not just G.
     const survival = rolls
-      ? survivalProb(occ.chestG, base * 0.3, (1 - stats.rolloverProtection) * 1.2)
-      : 0.995;
+      ? clamp(
+          logistic(4.2 - base * 0.05 - (1 - stats.rolloverProtection) * 2.5 - Math.max(0, rollCount - 1) * 0.4),
+          0, 0.99,
+        )
+      : 0.99;
     const safety = safetyScore(stats, { peakDecelG: peakG, cabinIntrusionCm: base * 0.3, occupantG: occ.chestG });
     notes.push(rolls ? `Rolled ${rollCount}× (${lateralG.toFixed(2)} g > ${stats.rolloverThreshold.toFixed(2)} g threshold)` : `Held the road (${lateralG.toFixed(2)} g)`);
     return {
@@ -336,20 +345,30 @@ export function computeCrash(stats: VehicleStats, cfg: ScenarioConfig): CrashRes
   const structuralIntegrity = Math.round(clamp(100 - base * 0.7 - intrusionCm * 1.5, 0, 100));
   const safety = safetyScore(stats, { peakDecelG: sol.peakDecelG, cabinIntrusionCm: intrusionCm, occupantG: occ.chestG });
 
-  // Failure diagnosis.
-  let primary = 'Front structure absorbed impact';
+  // Failure diagnosis — narrate what the numbers mean so the verdict and the
+  // text agree (a fully-used but contained crumple zone is a good outcome).
+  const fullyDeployed = sol.deformationPct >= 100;
+  let primary: string;
   let secondary: string | null = null;
-  if (sol.structureFailed) {
-    primary = isSide ? 'Cabin cell breach — side intrusion' : 'Cabin intrusion — crumple zone overwhelmed';
-  } else if (base > 80) {
-    primary = 'Severe front-end deformation';
-  } else if (base < 30) {
+  if (intrusionCm > 30) {
+    primary = isSide ? 'Cabin collapse — occupant space lost' : 'Cabin collapse — crumple zone overwhelmed';
+  } else if (intrusionCm > 15) {
+    primary = isSide ? 'Cabin cell breach — side intrusion' : 'Crumple zone overwhelmed — cabin intrusion';
+  } else if (isSide) {
+    primary = intrusionCm > 5 ? 'Side structure deformed — minor intrusion' : 'Side impact absorbed';
+  } else if (fullyDeployed) {
+    primary = 'Crumple zone fully deployed — energy absorbed';
+  } else if (base > 70) {
+    primary = 'Major front deformation';
+  } else if (base < 25) {
     primary = 'Minor deformation — structure held';
+  } else {
+    primary = 'Front structure absorbed impact';
   }
   if (occ.chestG > 55) secondary = 'Occupant deceleration exceeded survivable limit';
-  else if (damage.wheels > 70) secondary = 'Front suspension & wheel assembly destroyed';
   else if (stats.restraint < 0.3) secondary = 'Inadequate occupant restraint';
   else if (damage.battery > 60) secondary = 'Battery pack compromised';
+  else if (damage.wheels > 75) secondary = 'Front suspension & wheel assembly destroyed';
 
   return {
     scenarioId: scn.id, scenarioName: scn.name,

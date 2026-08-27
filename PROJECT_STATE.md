@@ -15,13 +15,40 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 2
+## Current status: END OF SESSION 3
 
-The core game loop is **playable end to end with real-time 3D physics**:
+The core game loop is **playable end to end with real-time 3D physics, a
+challenge campaign, and progression**:
 
 **BUILD** (Garage + Builder) → **TEST** (scenario + params) → **CRASH**
 (3D Rapier sim, cinematic + replay) → **ANALYZE** (engineering report) →
-**MODIFY** → **RUN AGAIN**.
+**MODIFY** → **RUN AGAIN**, plus a **Goals** campaign that gates part unlocks.
+
+### New in Session 3 — challenges, progression & crash-model balancing (Phase 10 + 11)
+- **Challenge system** (`src/game/challenges/challenges.ts`): 8 data-driven
+  challenges across 3 tiers, each pinning a scenario + fixed params and a set of
+  measurable goals (survival, cabin intrusion, peak-G, safety, braking distance,
+  top speed, cost, mass, power-to-weight). Pure `evaluateChallenge()` returns
+  pass/fail + a 1–3★ rating from goal headroom.
+- **Progression / unlocks** (store): completing a challenge grants part unlocks
+  and records best stars (persisted). Challenges gate on prerequisites; parts
+  gate on `isPartUnlocked`. **Design rule enforced: no challenge requires the
+  part it rewards** — rewards help later challenges.
+- **Goals screen** (`ChallengesScreen`): 5th nav tab, challenge grid with
+  lock/complete/★ states, a bottom-sheet detail (scenario, objectives, reward),
+  Attempt/Retry.
+- **Challenge mode** threads through Builder (challenge banner, locked scenario,
+  "Run ›") and Test (locked params, `ChallengeResult` overlay with stars, goal
+  checklist, unlock reveal; "Report" still opens the full analysis).
+- **Builder unlock gating**: locked parts render greyed with a "Win *X*" hint
+  and can't be selected.
+- **Crash-model balancing**: failure text now tracks the numbers (a fully-used
+  but contained crumple zone reads "energy absorbed", not "overwhelmed");
+  structure-failure threshold raised to 18 cm; **rollover retuned** so rollover
+  protection & cabin strength actually drive survival (was near-always fatal).
+- Verified end-to-end in headless WebGL: Goals → attempt First Contact → 3D
+  crash → CHALLENGE COMPLETE (3★) → Roll Cage unlocked → tier-2 challenges
+  unlock on the list. No page errors.
 
 ### New in Session 2 — 3D deterministic physics + replay (Phase 5, 6, 8)
 - **Pre-simulated crash engine** (`src/game/sim/crashSim.ts`): builds a Rapier3D
@@ -121,9 +148,9 @@ later refinement.
 | 7 | Damage system | 🟨 model done; 3D crush is basic (scale); no debris |
 | 8 | Cinematic replay + slow-mo scrubber | ✅ done (camera modes, slow-mo, scrubber, replay) |
 | 9 | Crash analysis | ✅ done (report) |
-| 10 | Challenges | ⬜ |
-| 11 | Progression / unlocks | ⬜ |
-| 12 | Persistence | 🟨 builds+settings persisted; replays not stored |
+| 10 | Challenges | ✅ done (8 challenges, 3 tiers, ★ ratings) |
+| 11 | Progression / unlocks | ✅ done (part unlocks via challenges, gated builder) |
+| 12 | Persistence | 🟨 builds+settings+unlocks+challenge progress persisted; replays not stored |
 | 13 | Leaderboards / shareability | ⬜ (share codes generated, no UI/backend) |
 | 14 | Audio | ⬜ |
 | 15 | Mobile optimization | 🟨 mobile-first + lazy 3D chunk; perf pass on device later |
@@ -131,29 +158,30 @@ later refinement.
 
 ---
 
-## Recommended next task (Session 3)
+## Recommended next task (Session 4)
 
-Two high-value directions; pick based on appetite:
+**Sound + game feel (Phase 14 + polish)** — the crash is still silent, and this
+is now the biggest missing "oh my god" multiplier. Add a Web Audio architecture
+(procedural, no asset files): engine/EV whine pitched to speed, tire, wind,
+impact crunch, metal groan, glass; trigger the impact SFX off the sim
+`impactFrame`; honor `settings.muted`. Then add camera shake on impact, tire
+skid marks on the ground plane, and a simple debris/spark burst in 3D.
 
-**A. Sound + game feel (Phase 14 + polish)** — the crash is silent. Add a Web
-Audio architecture: engine/tire/impact/metal-crunch/glass, wind, warning tones;
-tie impact SFX to the sim `impactFrame`, pitch to speed, honor the mute setting
-in the store. Add camera shake, tire skid marks on the ground, and simple debris
-particles at impact. This is the cheapest big jump in "oh my god" feel now that
-the visuals work.
+Secondary polish, any of:
+- **Sandbox / Experiment mode (Phase 19)** — a toggle (already `settings.sandbox`
+  in the store) that ignores the budget and unlock gating; wire it into a garage
+  entry + builder so players can build ridiculous cars.
+- **Daily challenge (Phase 28)** — one rotating seeded challenge on the Goals
+  screen.
+- **Shareable build card + crash replay persistence (Phase 13 + 24)** — store
+  `SimRecording`/config so old crashes replay; a share card from the build.
+- Balance playtest: the challenge targets are first-pass; the deeper ones
+  (Featherweight, Stay Upright, The Fortress) need a real difficulty check, and
+  the sim's measured `peakAccelG` still isn't reconciled into the report.
 
-**B. Challenges + progression (Phase 10 + 11)** — structured goals ("survive 40
-mph under $20k", "stop in <30 m", "safest build") scored from `CrashResult` /
-`VehicleStats`, with unlock gating that finally uses the `startUnlocked` flags.
-Gives the loop a reason to keep going.
-
-Also worth a small dedicated pass: **balance `crashModel.ts`** (the deformation/
-survival mismatch) and **reconcile the 3D sim's measured `peakAccelG`** into the
-report so the number on screen matches the physics the player just watched.
-
-Before starting: `npm install`, `npm run dev`, open at 393×852, run
-Garage → Build → Crash (watch the 3D sim, scrub it) → Report to confirm no
-regressions. WebGL is required for the crash view.
+Before starting: `npm install`, `npm run dev`, open at 393×852. Smoke path:
+Goals → attempt a challenge → Build (note locked parts) → Run → 3D crash →
+CHALLENGE COMPLETE → reward unlock. WebGL required for the crash view.
 
 ## Session log
 - **Session 1**: Scaffolded project; built app shell, parts DB, stat engine,
@@ -166,3 +194,10 @@ regressions. WebGL is required for the crash view.
   visual crush. Lazy-loaded chunk (main bundle unchanged). All 11 scenarios set
   up. Verified across frontal/rollover/braking/side in headless WebGL; Report
   transition intact. Dropped `rapier2d-compat`.
+- **Session 3**: Added the **Challenges campaign + progression** — 8 challenges
+  across 3 tiers, star ratings, part-unlock rewards with a no-self-dependency
+  rule, a Goals screen, and challenge mode woven through Builder/Test with a
+  `ChallengeResult` overlay. Gated locked parts in the builder. Balanced the
+  crash model (failure narration matches the numbers; rollover retuned so
+  protection matters). Verified the full attempt→complete→unlock loop in
+  headless WebGL.

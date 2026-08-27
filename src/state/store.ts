@@ -1,13 +1,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { PartCategory, VehicleBuild } from '../game/parts/types';
+import { getPart } from '../game/parts/partsDatabase';
 import {
   cloneBuild,
   createDefaultBuild,
   makeId,
 } from '../game/vehicle/vehicleModel';
 
-export type Screen = 'garage' | 'builder' | 'test' | 'lab';
+export type Screen = 'garage' | 'builder' | 'test' | 'lab' | 'challenges';
+
+export interface ChallengeRecord {
+  stars: number;
+  completedAt: number;
+}
 
 interface Settings {
   muted: boolean;
@@ -23,9 +29,23 @@ interface GameState {
   screen: Screen;
   settings: Settings;
 
+  // --- progression ---
+  /** Part ids unlocked beyond the default `startUnlocked` set. */
+  unlockedParts: string[];
+  /** challengeId → best result. */
+  challengeProgress: Record<string, ChallengeRecord>;
+  /** The challenge currently being attempted (locks scenario, adds goals). */
+  activeChallengeId: string | null;
+
   // --- navigation ---
   setScreen: (s: Screen) => void;
   openBuilder: (buildId: string) => void;
+
+  // --- challenges / progression ---
+  startChallenge: (challengeId: string, buildId?: string) => void;
+  exitChallenge: () => void;
+  completeChallenge: (challengeId: string, stars: number, rewardParts?: string[]) => boolean;
+  isPartUnlocked: (partId: string) => boolean;
 
   // --- build CRUD ---
   createBuild: (name?: string) => string;
@@ -57,9 +77,46 @@ export const useGame = create<GameState>()(
       activeBuildId: null,
       screen: 'garage',
       settings: { muted: false, sandbox: false, reduceMotion: false },
+      unlockedParts: [],
+      challengeProgress: {},
+      activeChallengeId: null,
 
       setScreen: (s) => set({ screen: s }),
       openBuilder: (buildId) => set({ activeBuildId: buildId, screen: 'builder' }),
+
+      startChallenge: (challengeId, buildId) =>
+        set((st) => ({
+          activeChallengeId: challengeId,
+          activeBuildId: buildId ?? st.activeBuildId,
+          screen: 'builder',
+        })),
+
+      exitChallenge: () => set({ activeChallengeId: null }),
+
+      completeChallenge: (challengeId, stars, rewardParts) => {
+        const prev = get().challengeProgress[challengeId];
+        const firstTime = !prev;
+        const bestStars = Math.max(prev?.stars ?? 0, stars);
+        set((st) => {
+          const unlocked = new Set(st.unlockedParts);
+          for (const p of rewardParts ?? []) unlocked.add(p);
+          return {
+            challengeProgress: {
+              ...st.challengeProgress,
+              [challengeId]: { stars: bestStars, completedAt: Date.now() },
+            },
+            unlockedParts: [...unlocked],
+          };
+        });
+        return firstTime;
+      },
+
+      isPartUnlocked: (partId) => {
+        const p = getPart(partId);
+        if (!p) return false;
+        if (p.startUnlocked) return true;
+        return get().unlockedParts.includes(partId);
+      },
 
       createBuild: (name) => {
         const build = createDefaultBuild(name ?? `Build ${get().builds.length + 1}`);
@@ -137,6 +194,8 @@ export const useGame = create<GameState>()(
         builds: st.builds,
         activeBuildId: st.activeBuildId,
         settings: st.settings,
+        unlockedParts: st.unlockedParts,
+        challengeProgress: st.challengeProgress,
       }),
     },
   ),

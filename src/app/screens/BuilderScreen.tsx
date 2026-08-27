@@ -8,6 +8,7 @@ import {
 } from '../../game/parts/partsDatabase';
 import { deriveStats, type VehicleStats } from '../../game/vehicle/deriveStats';
 import { BUILD_BUDGET, PAINT_COLORS } from '../../game/vehicle/vehicleModel';
+import { getChallenge, PART_UNLOCK_SOURCE } from '../../game/challenges/challenges';
 import { VehicleSilhouette } from '../../components/vehicle/VehicleSilhouette';
 import { fmt, money, signed } from '../../lib/format';
 import './builder.css';
@@ -39,6 +40,10 @@ export function BuilderScreen() {
   const setColor = useGame((s) => s.setColor);
   const renameBuild = useGame((s) => s.renameBuild);
   const setScreen = useGame((s) => s.setScreen);
+  const isPartUnlocked = useGame((s) => s.isPartUnlocked);
+  const activeChallengeId = useGame((s) => s.activeChallengeId);
+  const exitChallenge = useGame((s) => s.exitChallenge);
+  const challenge = getChallenge(activeChallengeId);
 
   const [cat, setCat] = useState<PartCategory>('chassis');
   const [editingName, setEditingName] = useState(false);
@@ -94,9 +99,17 @@ export function BuilderScreen() {
           </button>
         )}
         <button className="btn btn-primary builder-test-btn" onClick={() => setScreen('test')} disabled={!stats.valid}>
-          Test ›
+          {challenge ? 'Run ›' : 'Test ›'}
         </button>
       </header>
+
+      {challenge && (
+        <div className="builder-challenge">
+          <span className="bc-icon">{challenge.icon}</span>
+          <span className="bc-brief">{challenge.brief}</span>
+          <button className="bc-exit" onClick={() => exitChallenge()} aria-label="Exit challenge">✕</button>
+        </div>
+      )}
 
       {/* Preview */}
       <div className="builder-preview blueprint-grid">
@@ -174,12 +187,16 @@ export function BuilderScreen() {
           const showDelta = !selected && Math.abs(delta) > (metric.digits === 2 ? 0.005 : 0.05);
           const good = metric.better === 'up' ? delta > 0 : delta < 0;
           const wouldOverBudget = !build.sandbox && !selected && hyp.totalCost > BUILD_BUDGET;
+          const locked = !selected && !isPartUnlocked(p.id);
+          const unlockSrc = PART_UNLOCK_SOURCE.get(p.id);
 
           return (
             <button
               key={p.id}
               className="part-card"
               data-selected={selected}
+              data-locked={locked}
+              disabled={locked}
               onClick={() =>
                 isMulti
                   ? toggleMultiPart(build.id, cat as 'safety' | 'aero', p.id)
@@ -190,6 +207,7 @@ export function BuilderScreen() {
                 <div className="part-top">
                   <span className="part-name">{p.name}</span>
                   {selected && <span className="part-check">✓</span>}
+                  {locked && <span className="part-lock-badge">🔒</span>}
                   {p.tags?.includes('exotic') && <span className="part-tag">EXOTIC</span>}
                 </div>
                 <p className="part-desc">{p.description}</p>
@@ -202,17 +220,23 @@ export function BuilderScreen() {
                 </div>
               </div>
               <div className="part-delta">
-                <span className="part-delta-label">{metric.label}</span>
-                {showDelta ? (
-                  <span className="part-delta-val mono" style={{ color: good ? 'var(--c-lime)' : 'var(--c-red)' }}>
-                    {signed(delta, metric.digits)}{metric.unit}
-                  </span>
+                {locked ? (
+                  <span className="part-unlock-hint">{unlockSrc ? `Win “${unlockSrc.name}”` : 'Locked'}</span>
                 ) : (
-                  <span className="part-delta-val mono dim">
-                    {fmt(hypVal, metric.digits)}{metric.unit}
-                  </span>
+                  <>
+                    <span className="part-delta-label">{metric.label}</span>
+                    {showDelta ? (
+                      <span className="part-delta-val mono" style={{ color: good ? 'var(--c-lime)' : 'var(--c-red)' }}>
+                        {signed(delta, metric.digits)}{metric.unit}
+                      </span>
+                    ) : (
+                      <span className="part-delta-val mono dim">
+                        {fmt(hypVal, metric.digits)}{metric.unit}
+                      </span>
+                    )}
+                    {wouldOverBudget && <span className="part-over">over budget</span>}
+                  </>
                 )}
-                {wouldOverBudget && <span className="part-over">over budget</span>}
               </div>
             </button>
           );

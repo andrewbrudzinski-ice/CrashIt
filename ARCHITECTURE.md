@@ -57,6 +57,7 @@ src/
     scenarios/scenarios.ts    Scenario defs + params + ScenarioConfig
     crash/crashModel.ts       Analytical crash → CrashResult (scored outcome)
     sim/crashSim.ts           Rapier3D pre-simulation → baked SimRecording
+    challenges/challenges.ts  Challenge defs + evaluation + unlock mapping
   lib/format.ts               Display formatters + rating colors
 ```
 

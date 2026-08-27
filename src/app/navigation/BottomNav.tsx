@@ -45,6 +45,17 @@ const NAV: NavDef[] = [
       </>
     ),
   },
+  {
+    key: 'challenges',
+    label: 'Goals',
+    icon: (
+      <>
+        <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z" />
+        <path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3" />
+        <path d="M12 13v4M9 21h6M10 17h4" />
+      </>
+    ),
+  },
 ];
 
 export function BottomNav() {

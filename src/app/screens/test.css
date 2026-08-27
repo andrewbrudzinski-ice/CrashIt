@@ -1,5 +1,30 @@
 .test { display: block; position: relative; }
 
+.test-challenge-banner {
+  background: linear-gradient(135deg, rgba(255, 107, 26, 0.12), rgba(255, 107, 26, 0.03));
+  border: 1px solid rgba(255, 107, 26, 0.35);
+  border-radius: var(--r-lg);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.tcb-top { display: flex; align-items: center; gap: 10px; }
+.tcb-icon { font-size: 22px; }
+.tcb-brief { flex: 1; font-size: 13px; font-weight: 600; color: var(--c-text); }
+.tcb-exit {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--c-surface-3); border: 1px solid var(--c-line);
+  color: var(--c-text-dim); font-size: 13px; flex: 0 0 auto;
+}
+.tcb-goals { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tcb-goal {
+  font-size: 10.5px; font-weight: 700;
+  color: var(--c-hazard-soft);
+  background: rgba(255, 107, 26, 0.1);
+  border: 1px solid rgba(255, 107, 26, 0.25);
+  border-radius: var(--r-pill);
+  padding: 3px 9px;
+}
+
 .test-vehicle {
   display: flex;
   gap: 12px;
