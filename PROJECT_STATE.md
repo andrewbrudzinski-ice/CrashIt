@@ -15,7 +15,34 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 15
+## Current status: END OF SESSION 16
+
+**Session 16 — vehicles are now real GLB assets, not procedural geometry.**
+Per the user's call, the from-scratch procedural car modelling was abandoned and
+`carMesh3d.ts` deleted. Vehicles are now pre-modelled **GLB assets** (CC0 Kenney
+"Car Kit", commercial-OK; license shipped in the models dir), loaded at runtime
+and driven by the unchanged physics. New pipeline:
+
+- `src/game/vehicles/vehicleAssets.ts` — the **Vehicle Definition** layer
+  (id/name/category/modelPath/paint/damageMultiplier) + chassis→vehicle map.
+  Seven fictional cars: **Metro** (compact), **Aria** (sedan), **Vortex**
+  (muscle), **Falcon S** (sports), **Atlas** (SUV), **Titan** (pickup),
+  **Transit** (van) — each a distinct silhouette.
+- `src/components/vehicle/vehicleModel3d.ts` — GLTF **loader**: normalises
+  orientation/scale/ground, upgrades the flat colormap to PBR, **repaints only
+  the body swatch** (area-weighted atlas detection, so glass/lights/trim keep
+  their colours), and does zone **deformation** (body-vertex crush + wheel splay)
+  on the loaded mesh. Physics/collision stays a separate simple box.
+- `public/models/vehicles/*.glb` (+ shared `Textures/colormap.png`, license).
+- `CrashSim3D` now `await`s `loadVehicleModel` for the chassis + opponents;
+  crumple, glass-shatter, debris, smoke and shadows all still fire.
+- **Vehicle Lab** showroom rewritten around the assets (orbit + Side/Front/Rear/
+  Top/3-4 presets, vehicle picker, paint, damage slider).
+
+Verified in-showroom (all 7 distinct, paint recolour working) and in an actual
+crash (blue sedan intact + SUV crumpling into the barrier with debris).
+
+## Previous status: END OF SESSION 15
 
 **Session 15 — vehicle system rebuilt from the ground up (in progress).** The
 old blob was replaced with an archetype-driven procedural car system

@@ -8,8 +8,8 @@ import type { Scenario, ScenarioConfig } from '../../game/scenarios/scenarios';
 import { initRapier, simulateCrash, type SimRecording } from '../../game/sim/crashSim';
 import { audio } from '../../game/audio/audio';
 import { useGame } from '../../state/store';
-import { buildCarMesh } from '../vehicle/carMesh3d';
-import { CHASSIS_STYLE } from '../vehicle/silhouetteProfiles';
+import { loadVehicleModel } from '../vehicle/vehicleModel3d';
+import { vehicleForChassis, vehicleById } from '../../game/vehicles/vehicleAssets';
 import { getCondition } from '../../game/scenarios/conditions';
 import './crashSim3d.css';
 
@@ -162,39 +162,20 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
         scene.add(mesh);
       }
 
-      // ---- Dynamic body meshes ----
+      // ---- Dynamic body meshes: real GLB vehicle assets ----
       const bodyGroups: THREE.Group[] = [];
-      const chassisStyle = CHASSIS_STYLE[build.parts.chassis ?? 'chassis.sedan'] ?? 'sedan';
       let chassisDeform: ((d: typeof result.damage, t: number) => void) | null = null;
-      rec.bodies.forEach((b) => {
-        const [L, H, W] = b.size;
-        if (b.kind === 'chassis') {
-          const aeroSet = new Set(build.aero);
-          const aero = {
-            spoiler: aeroSet.has('aero.spoiler'),
-            wing: aeroSet.has('aero.wing') || aeroSet.has('aero.active'),
-            splitter: aeroSet.has('aero.splitter'),
-            diffuser: aeroSet.has('aero.diffuser'),
-          };
-          const { group: g, deform } = buildCarMesh(chassisStyle, L, H, W, build.color, rec.wheelRadius, rec.wheelLocal, {
-            aero,
-          });
-          chassisDeform = deform;
-          g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-          scene.add(g);
-          bodyGroups.push(g);
-        } else {
-          // Opponent vehicles: a shaped sedan body in their own colour.
-          const oppWheels: number[][] = [
-            [L * 0.32, -H * 0.5 + 0.12, W * 0.5], [L * 0.32, -H * 0.5 + 0.12, -W * 0.5],
-            [-L * 0.32, -H * 0.5 + 0.12, W * 0.5], [-L * 0.32, -H * 0.5 + 0.12, -W * 0.5],
-          ];
-          const { group: g } = buildCarMesh('sedan', L, H, W, b.color ?? '#c0392b', 0.3, oppWheels);
-          g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-          scene.add(g);
-          bodyGroups.push(g);
-        }
-      });
+      const chassisDef = vehicleForChassis(build.parts.chassis);
+      for (const b of rec.bodies) {
+        const [L, H] = b.size;
+        const def = b.kind === 'chassis' ? chassisDef : vehicleById('aria');
+        const paint = b.kind === 'chassis' ? build.color : (b.color ?? '#c0392b');
+        const veh = await loadVehicleModel(def, { paint, targetLength: L, groundY: -H * 0.5 });
+        if (disposed) return;
+        if (b.kind === 'chassis') chassisDeform = veh.deform;
+        scene.add(veh.group);
+        bodyGroups.push(veh.group);
+      }
 
       // Impact flash light
       const flashLight = new THREE.PointLight(0xffaa55, 0, 30);
