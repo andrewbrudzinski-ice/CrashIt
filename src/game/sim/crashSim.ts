@@ -73,6 +73,10 @@ interface Tracked {
 }
 
 const WHEEL_R = 0.32;
+/** Wheel radius for a build (sandbox wheel-scale aware). */
+function wheelR(stats: VehicleStats): number {
+  return WHEEL_R * (stats.wheelScale ?? 1);
+}
 
 function quatAxis(x: number, y: number, z: number, angle: number) {
   const h = angle / 2, s = Math.sin(h);
@@ -88,7 +92,8 @@ function chassisDims(stats: VehicleStats) {
 
 export function wheelLocalOffsets(stats: VehicleStats): number[][] {
   const { hx, hy, hz } = chassisDims(stats);
-  const wx = hx * 0.66, wz = hz + 0.02, wy = -hy + WHEEL_R * 0.4;
+  const r = wheelR(stats);
+  const wx = hx * 0.66, wz = hz + 0.02, wy = -hy + r * 0.4;
   return [[wx, wy, wz], [wx, wy, -wz], [-wx, wy, wz], [-wx, wy, -wz]];
 }
 
@@ -123,12 +128,13 @@ function buildChassis(
     rb,
   );
   // Welded wheels (physics contact + look).
+  const r = wheelR(stats);
   for (const [px, py, pz] of wheelLocalOffsets(stats)) {
     world.createCollider(
-      RAPIER.ColliderDesc.cylinder(0.12, WHEEL_R)
+      RAPIER.ColliderDesc.cylinder(0.12, r)
         .setRotation(quatAxis(1, 0, 0, Math.PI / 2))
         .setTranslation(px, py, pz)
-        .setDensity(0.0001).setFriction(Math.max(0.7, stats.tireGrip)).setRestitution(0.1),
+        .setDensity(0.0001).setFriction(Math.max(0.7, Math.min(2, stats.tireGrip))).setRestitution(0.1),
       rb,
     );
   }
@@ -182,7 +188,7 @@ function assemble(world: RAPIER.World, stats: VehicleStats, cfg: ScenarioConfig,
   const props: PropDef[] = [];
   staticBox(world, 0, -1, 0, 200, 1, 60, Math.max(0.7, stats.tireGrip)); // ground
   props.push({ kind: 'ground', pos: [0, -1, 0], size: [400, 2, 120], color: '#12161d' });
-  const rideY = WHEEL_R + stats.rideHeight / 100 + chassisDims(stats).bodyH / 2 - 0.1;
+  const rideY = wheelR(stats) + stats.rideHeight / 100 + chassisDims(stats).bodyH / 2 - 0.1;
 
   /** Static box that also records a visual prop. */
   const prop = (
@@ -310,7 +316,7 @@ export function simulateCrash(stats: VehicleStats, cfg: ScenarioConfig, clean: b
     dt: DT,
     transforms: transforms.subarray(0, used * n * FLOATS_PER_BODY),
     wheelLocal: wheelLocalOffsets(stats),
-    wheelRadius: WHEEL_R,
+    wheelRadius: wheelR(stats),
     impactFrame,
     peakAccelG: peakAccel / 9.81,
     impactSpeedKmh: Math.round(impactSpeed * 3.6),

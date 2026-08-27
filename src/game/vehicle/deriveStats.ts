@@ -20,6 +20,7 @@ export interface VehicleStats {
   height: number; // m
   cogHeight: number; // cm above ground
   rideHeight: number; // cm
+  wheelScale: number; // wheel-radius multiplier (sandbox); 1 = stock
   weightDistFront: number; // 0..1 fraction on front axle
   /** Static rollover threshold ~ trackWidth / (2 * cogHeight). Higher = harder to tip. */
   rolloverThreshold: number;
@@ -190,25 +191,38 @@ export function deriveStats(build: VehicleBuild): VehicleStats {
   const engine = getPart(build.parts.engine);
   const driveP = getPart(build.parts.drivetrain);
 
+  // Sandbox tuning (identity when absent).
+  const tun = build.tuning;
+  const wheelScale = tun ? clamp(tun.wheelScale, 0.3, 3) : 1;
+
   // --- Mass & geometry ---
-  const mass = Math.max(300, platform.baseMass + sumEffect(parts, 'mass'));
+  let mass = Math.max(300, platform.baseMass + sumEffect(parts, 'mass'));
   const weightDistFront = clamp(platform.baseWeightDist + sumEffect(parts, 'frontBiasDelta'), 0.35, 0.72);
-  const cogHeight = Math.max(20, platform.baseCogHeight + sumEffect(parts, 'cogHeightDelta'));
+  let cogHeight = Math.max(20, platform.baseCogHeight + sumEffect(parts, 'cogHeightDelta'));
   const rideHeight = Math.max(4, platform.baseRideHeight + sumEffect(parts, 'rideHeightDelta'));
-  const rolloverThreshold = (platform.trackWidth * 100) / (2 * cogHeight);
 
   // --- Powertrain ---
   const drivetrainLoss = clamp(sumEffect(parts, 'drivetrainLoss'), 0, 0.5);
-  const crankPowerHp = sumEffect(parts, 'powerHp');
-  const wheelPowerHp = crankPowerHp * (1 - drivetrainLoss);
+  let crankPowerHp = sumEffect(parts, 'powerHp');
   const torqueNm = sumEffect(parts, 'torqueNm');
   const powerband = clamp(sumEffect(parts, 'powerband'), 0, 1);
 
   // --- Grip / aero ---
-  const tireGrip = clamp(sumEffect(parts, 'gripAdd') * mulEffect(parts, 'gripMul'), 0.4, 1.8);
+  let tireGrip = clamp(sumEffect(parts, 'gripAdd') * mulEffect(parts, 'gripMul'), 0.4, 1.8);
   const dragCoefficient = clamp(platform.baseDrag * mulEffect(parts, 'dragMul'), 0.15, 0.7);
-  const downforceCoef = Math.max(0, sumEffect(parts, 'downforce'));
+  let downforceCoef = Math.max(0, sumEffect(parts, 'downforce'));
   const frontalArea = platform.frontalArea;
+
+  // Apply sandbox tuning to the physical inputs before deriving performance.
+  if (tun) {
+    mass = Math.max(150, mass * clamp(tun.massMul, 0.2, 4));
+    crankPowerHp *= clamp(tun.powerMul, 0.1, 6);
+    tireGrip = clamp(tireGrip * clamp(tun.gripMul, 0.2, 3), 0.1, 4);
+    downforceCoef = Math.max(0, downforceCoef * clamp(tun.downforceMul, 0, 6));
+    cogHeight = Math.max(8, cogHeight + tun.cogDelta);
+  }
+  const wheelPowerHp = crankPowerHp * (1 - drivetrainLoss);
+  const rolloverThreshold = (platform.trackWidth * 100) / (2 * cogHeight);
 
   // --- Structure ---
   const chassisStrength = Math.max(10, platform.baseChassisStrength + sumEffect(parts, 'chassisStrength'));
@@ -262,6 +276,7 @@ export function deriveStats(build: VehicleBuild): VehicleStats {
     height: platform.height,
     cogHeight,
     rideHeight,
+    wheelScale,
     weightDistFront,
     rolloverThreshold,
     engineKind: engine?.engineKind ?? null,

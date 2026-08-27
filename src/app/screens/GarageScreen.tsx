@@ -12,9 +12,13 @@ export function GarageScreen() {
   const openBuilder = useGame((s) => s.openBuilder);
   const duplicateBuild = useGame((s) => s.duplicateBuild);
   const deleteBuild = useGame((s) => s.deleteBuild);
+  const sandbox = useGame((s) => s.settings.sandbox);
+  const setSandbox = useGame((s) => s.setSandbox);
+  const updateBuild = useGame((s) => s.updateBuild);
 
   const handleNew = () => {
     const id = createBuild();
+    if (sandbox) updateBuild(id, { sandbox: true });
     openBuilder(id);
   };
 
@@ -22,13 +26,21 @@ export function GarageScreen() {
     <div className="screen">
       <header className="screen-header">
         <div style={{ flex: 1 }}>
-          <div className="screen-eyebrow">Crash Lab</div>
-          <div className="garage-brand mono">MY GARAGE</div>
+          <div className="screen-eyebrow">{sandbox ? 'Experiment Lab' : 'Crash Lab'}</div>
+          <div className="garage-brand mono">{sandbox ? 'SANDBOX' : 'MY GARAGE'}</div>
         </div>
         <span className="pill">{builds.length} builds</span>
       </header>
 
       <div className="screen-body">
+        <div className="mode-toggle" role="tablist" aria-label="Game mode">
+          <button className="mode-opt" data-active={!sandbox} onClick={() => setSandbox(false)}>Career</button>
+          <button className="mode-opt" data-active={sandbox} onClick={() => setSandbox(true)}>Sandbox</button>
+        </div>
+        {sandbox && (
+          <p className="mode-hint">No budget, no locks. Build something absurd — then break it.</p>
+        )}
+
         <button className="btn btn-primary btn-block garage-new" onClick={handleNew}>
           + New Vehicle
         </button>
@@ -36,7 +48,7 @@ export function GarageScreen() {
         <div className="garage-list">
           {builds.map((b) => {
             const stats = deriveStats(b);
-            const overBudget = !b.sandbox && stats.totalCost > BUILD_BUDGET;
+            const overBudget = !sandbox && !b.sandbox && stats.totalCost > BUILD_BUDGET;
             return (
               <article key={b.id} className="card garage-card" onClick={() => openBuilder(b.id)}>
                 <div className="garage-thumb blueprint-grid">

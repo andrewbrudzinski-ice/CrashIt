@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGame } from '../../state/store';
-import type { PartCategory, VehicleBuild } from '../../game/parts/types';
+import type { PartCategory, Tuning, VehicleBuild } from '../../game/parts/types';
+import { IDENTITY_TUNING } from '../../game/parts/types';
 import {
   CATEGORY_LABELS,
   PARTS_BY_CATEGORY,
@@ -43,9 +44,12 @@ export function BuilderScreen() {
   const isPartUnlocked = useGame((s) => s.isPartUnlocked);
   const activeChallengeId = useGame((s) => s.activeChallengeId);
   const exitChallenge = useGame((s) => s.exitChallenge);
+  const sandbox = useGame((s) => s.settings.sandbox);
+  const setTuning = useGame((s) => s.setTuning);
+  const resetTuning = useGame((s) => s.resetTuning);
   const challenge = getChallenge(activeChallengeId);
 
-  const [cat, setCat] = useState<PartCategory>('chassis');
+  const [cat, setCat] = useState<PartCategory | 'tuning'>('chassis');
   const [editingName, setEditingName] = useState(false);
 
   if (!build) {
@@ -60,21 +64,23 @@ export function BuilderScreen() {
   }
 
   const stats = deriveStats(build);
-  const overBudget = !build.sandbox && stats.totalCost > BUILD_BUDGET;
+  const overBudget = !sandbox && !build.sandbox && stats.totalCost > BUILD_BUDGET;
   const budgetPct = Math.min(100, (stats.totalCost / BUILD_BUDGET) * 100);
-  const isMulti = cat === 'safety' || cat === 'aero';
-  const parts = PARTS_BY_CATEGORY[cat];
-  const metric = CATEGORY_METRIC[cat];
+  const isTuning = sandbox && cat === 'tuning';
+  const partCat = (cat === 'tuning' ? 'chassis' : cat) as PartCategory;
+  const isMulti = partCat === 'safety' || partCat === 'aero';
+  const parts = PARTS_BY_CATEGORY[partCat];
+  const metric = CATEGORY_METRIC[partCat];
 
-  /** Stats if `partId` replaced the current selection in `cat`. */
+  /** Stats if `partId` replaced the current selection in `partCat`. */
   const hypothetical = (partId: string): VehicleStats => {
     let next: VehicleBuild;
     if (isMulti) {
-      const list = build[cat as 'safety' | 'aero'];
+      const list = build[partCat as 'safety' | 'aero'];
       const nextList = list.includes(partId) ? list.filter((p) => p !== partId) : [...list, partId];
-      next = { ...build, [cat]: nextList };
+      next = { ...build, [partCat]: nextList };
     } else {
-      next = { ...build, parts: { ...build.parts, [cat]: partId } };
+      next = { ...build, parts: { ...build.parts, [partCat]: partId } };
     }
     return deriveStats(next);
   };
@@ -130,18 +136,27 @@ export function BuilderScreen() {
 
       {/* Budget */}
       <div className="builder-budget">
-        <div className="budget-track">
-          <div
-            className="budget-fill"
-            style={{ width: `${budgetPct}%`, background: overBudget ? 'var(--c-red)' : 'var(--c-hazard)' }}
-          />
-        </div>
-        <div className="budget-labels">
-          <span className="mono" style={{ color: overBudget ? 'var(--c-red)' : 'var(--c-text)' }}>
-            {money(stats.totalCost)}
-          </span>
-          <span className="mono dim">/ {money(BUILD_BUDGET)}{build.sandbox ? ' (sandbox)' : ''}</span>
-        </div>
+        {sandbox ? (
+          <div className="budget-labels">
+            <span className="mono" style={{ color: 'var(--c-violet)' }}>{money(stats.totalCost)}</span>
+            <span className="mono dim">SANDBOX · no budget</span>
+          </div>
+        ) : (
+          <>
+            <div className="budget-track">
+              <div
+                className="budget-fill"
+                style={{ width: `${budgetPct}%`, background: overBudget ? 'var(--c-red)' : 'var(--c-hazard)' }}
+              />
+            </div>
+            <div className="budget-labels">
+              <span className="mono" style={{ color: overBudget ? 'var(--c-red)' : 'var(--c-text)' }}>
+                {money(stats.totalCost)}
+              </span>
+              <span className="mono dim">/ {money(BUILD_BUDGET)}</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Live stat strip */}
@@ -155,6 +170,15 @@ export function BuilderScreen() {
 
       {/* Category tabs */}
       <div className="builder-tabs chip-row">
+        {sandbox && (
+          <button
+            className="builder-tab builder-tab-tuning"
+            data-active={cat === 'tuning'}
+            onClick={() => setCat('tuning')}
+          >
+            ⚗︎ Tuning
+          </button>
+        )}
         {CATEGORY_ORDER.map((c) => {
           const chosen = c === 'safety' || c === 'aero'
             ? build[c].length > 0
@@ -175,19 +199,22 @@ export function BuilderScreen() {
         })}
       </div>
 
-      {/* Parts list */}
+      {isTuning ? (
+        <TuningPanel build={build} setTuning={setTuning} resetTuning={resetTuning} />
+      ) : (
+      /* Parts list */
       <div className="screen-body builder-parts">
         {parts.map((p) => {
           const selected = isMulti
-            ? build[cat as 'safety' | 'aero'].includes(p.id)
-            : build.parts[cat] === p.id;
+            ? build[partCat as 'safety' | 'aero'].includes(p.id)
+            : build.parts[partCat] === p.id;
           const hyp = hypothetical(p.id);
           const hypVal = hyp[metric.key] as number;
           const delta = hypVal - currentMetricVal;
           const showDelta = !selected && Math.abs(delta) > (metric.digits === 2 ? 0.005 : 0.05);
           const good = metric.better === 'up' ? delta > 0 : delta < 0;
-          const wouldOverBudget = !build.sandbox && !selected && hyp.totalCost > BUILD_BUDGET;
-          const locked = !selected && !isPartUnlocked(p.id);
+          const wouldOverBudget = !sandbox && !build.sandbox && !selected && hyp.totalCost > BUILD_BUDGET;
+          const locked = !sandbox && !selected && !isPartUnlocked(p.id);
           const unlockSrc = PART_UNLOCK_SOURCE.get(p.id);
 
           return (
@@ -199,8 +226,8 @@ export function BuilderScreen() {
               disabled={locked}
               onClick={() =>
                 isMulti
-                  ? toggleMultiPart(build.id, cat as 'safety' | 'aero', p.id)
-                  : selectPart(build.id, cat, p.id)
+                  ? toggleMultiPart(build.id, partCat as 'safety' | 'aero', p.id)
+                  : selectPart(build.id, partCat, p.id)
               }
             >
               <div className="part-main">
@@ -248,6 +275,52 @@ export function BuilderScreen() {
           </div>
         )}
       </div>
+      )}
+    </div>
+  );
+}
+
+/** Sandbox tuning sliders — push the physics to absurd extremes. */
+function TuningPanel({
+  build, setTuning, resetTuning,
+}: {
+  build: VehicleBuild;
+  setTuning: (id: string, patch: Partial<Tuning>) => void;
+  resetTuning: (id: string) => void;
+}) {
+  const t: Tuning = { ...IDENTITY_TUNING, ...build.tuning };
+  const rows: { key: keyof Tuning; label: string; min: number; max: number; step: number; fmt: (v: number) => string }[] = [
+    { key: 'powerMul', label: 'Engine Power', min: 0.25, max: 5, step: 0.05, fmt: (v) => `${v.toFixed(2)}×` },
+    { key: 'massMul', label: 'Mass', min: 0.3, max: 4, step: 0.05, fmt: (v) => `${v.toFixed(2)}×` },
+    { key: 'gripMul', label: 'Tire Grip', min: 0.3, max: 3, step: 0.05, fmt: (v) => `${v.toFixed(2)}×` },
+    { key: 'downforceMul', label: 'Downforce', min: 0, max: 5, step: 0.1, fmt: (v) => `${v.toFixed(1)}×` },
+    { key: 'wheelScale', label: 'Wheel Size', min: 0.4, max: 2.5, step: 0.05, fmt: (v) => `${v.toFixed(2)}×` },
+    { key: 'cogDelta', label: 'Center of Gravity', min: -30, max: 45, step: 1, fmt: (v) => `${v > 0 ? '+' : ''}${v} cm` },
+  ];
+  return (
+    <div className="screen-body tuning-panel">
+      <div className="tuning-head">
+        <span className="tuning-title">⚗︎ Experiment Tuning</span>
+        <button className="tuning-reset" onClick={() => resetTuning(build.id)}>Reset</button>
+      </div>
+      {rows.map((r) => (
+        <div key={r.key} className="tuning-row">
+          <div className="tuning-row-head">
+            <span className="tuning-label">{r.label}</span>
+            <span className="tuning-value mono">{r.fmt(t[r.key])}</span>
+          </div>
+          <input
+            type="range"
+            className="param-slider"
+            min={r.min}
+            max={r.max}
+            step={r.step}
+            value={t[r.key]}
+            onChange={(e) => setTuning(build.id, { [r.key]: Number(e.target.value) })}
+          />
+        </div>
+      ))}
+      <p className="tuning-note">Tuning multiplies part-derived stats. Physics still apply — good luck.</p>
     </div>
   );
 }

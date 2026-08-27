@@ -151,6 +151,24 @@ export interface Part {
   startUnlocked?: boolean;
 }
 
+/**
+ * Sandbox/experiment tuning — multipliers & offsets applied on top of the
+ * part-derived stats, letting players build physically ridiculous vehicles.
+ * Identity values (1 / 0) leave the build untouched.
+ */
+export interface Tuning {
+  powerMul: number;      // engine power ×
+  massMul: number;       // total mass ×
+  gripMul: number;       // tyre grip ×
+  downforceMul: number;  // downforce ×
+  wheelScale: number;    // wheel radius ×
+  cogDelta: number;      // centre-of-gravity height offset, cm
+}
+
+export const IDENTITY_TUNING: Tuning = {
+  powerMul: 1, massMul: 1, gripMul: 1, downforceMul: 1, wheelScale: 1, cogDelta: 0,
+};
+
 /** A concrete vehicle configuration authored by the player. */
 export interface VehicleBuild {
   id: string;
@@ -166,4 +184,6 @@ export interface VehicleBuild {
   updatedAt: number;
   /** True for sandbox/experiment builds that ignore the budget. */
   sandbox?: boolean;
+  /** Sandbox tuning overrides (absent = no tuning). */
+  tuning?: Tuning;
 }

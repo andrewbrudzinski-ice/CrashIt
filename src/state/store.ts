@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { PartCategory, VehicleBuild } from '../game/parts/types';
+import type { PartCategory, Tuning, VehicleBuild } from '../game/parts/types';
+import { IDENTITY_TUNING } from '../game/parts/types';
 import { getPart } from '../game/parts/partsDatabase';
 import {
   cloneBuild,
@@ -59,6 +60,8 @@ interface GameState {
   selectPart: (buildId: string, category: PartCategory, partId: string) => void;
   toggleMultiPart: (buildId: string, category: 'safety' | 'aero', partId: string) => void;
   setColor: (buildId: string, color: string) => void;
+  setTuning: (buildId: string, patch: Partial<Tuning>) => void;
+  resetTuning: (buildId: string) => void;
 
   // --- settings ---
   setMuted: (m: boolean) => void;
@@ -179,6 +182,22 @@ export const useGame = create<GameState>()(
         set((st) => ({
           builds: st.builds.map((b) =>
             b.id === buildId ? { ...b, color, updatedAt: Date.now() } : b,
+          ),
+        })),
+
+      setTuning: (buildId, patch) =>
+        set((st) => ({
+          builds: st.builds.map((b) =>
+            b.id === buildId
+              ? { ...b, tuning: { ...IDENTITY_TUNING, ...b.tuning, ...patch }, updatedAt: Date.now() }
+              : b,
+          ),
+        })),
+
+      resetTuning: (buildId) =>
+        set((st) => ({
+          builds: st.builds.map((b) =>
+            b.id === buildId ? { ...b, tuning: { ...IDENTITY_TUNING }, updatedAt: Date.now() } : b,
           ),
         })),
 

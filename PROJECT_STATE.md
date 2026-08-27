@@ -15,14 +15,29 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 4
+## Current status: END OF SESSION 5
 
 The core game loop is **playable end to end with real-time 3D physics + sound, a
-challenge campaign, and progression**:
+challenge campaign, progression, and a sandbox/experiment mode**:
 
 **BUILD** (Garage + Builder) → **TEST** (scenario + params) → **CRASH**
 (3D Rapier sim, sound + cinematic + replay) → **ANALYZE** (engineering report) →
-**MODIFY** → **RUN AGAIN**, plus a **Goals** campaign that gates part unlocks.
+**MODIFY** → **RUN AGAIN**, plus a **Goals** campaign that gates part unlocks and
+a **Sandbox** mode for absurd experiments.
+
+### New in Session 5 — sandbox / experiment mode (Phase 19)
+- **Tuning model** (`Tuning` on `VehicleBuild`): multipliers/offsets for engine
+  power, mass, tyre grip, downforce, wheel size, and centre-of-gravity height,
+  applied in `deriveStats` on top of the part-derived stats (identity when
+  absent). `wheelScale` is threaded into `crashSim` so tiny/huge wheels really
+  render & collide.
+- **Sandbox mode** (global `settings.sandbox`): a Career/Sandbox toggle on the
+  Garage. In sandbox the Builder drops the budget and unlock gating and gains a
+  **Tuning tab** with the extreme sliders. New builds made in sandbox are
+  flagged.
+- Verified in headless WebGL: toggle → new build (no budget, "Tuning" tab) →
+  power ×5 (1,050 hp, 0-60 rises to 11 s because traction-limited — emergent!) →
+  wheels ×2.5 render as a monster-truck stance in the 3D crash. No page errors.
 
 ### New in Session 4 — audio & game feel (Phase 14 + polish)
 - **Procedural audio engine** (`src/game/audio/audio.ts`): one AudioContext,
@@ -169,35 +184,31 @@ later refinement.
 | 14 | Audio | ✅ done (procedural engine/wind/screech/impact/glass/metal + mute) |
 | 15 | Mobile optimization | 🟨 mobile-first + lazy 3D chunk; perf pass on device later |
 | 16 | Final polish & balancing | ⬜ |
+| 19 | Experiment / sandbox mode | ✅ done (mode toggle + tuning sliders) |
 
 ---
 
-## Recommended next task (Session 5)
+## Recommended next task (Session 6)
 
 Pick one; all are self-contained:
 
-- **Sandbox / Experiment mode (Phase 19)** — `settings.sandbox` already exists in
-  the store; wire a garage/builder toggle that ignores budget + unlock gating so
-  players can build ridiculous cars (giant engine, tiny wheels, extreme CoG) and
-  crash them. High fun-per-effort.
 - **Shareable build card + crash replay persistence (Phase 13 + 24)** — persist
-  `SimRecording`/config (or just build+scenario, re-simmed deterministically) so
-  old crashes replay from the garage; generate a share card (name, key stats,
-  crash verdict) from the existing `shareCode`.
+  the last crash's build+scenario (re-simmed deterministically, so no need to
+  store the whole `SimRecording`) so old crashes replay from the garage;
+  generate a share card (name, key stats, crash verdict) from the existing
+  `shareCode`. High viral value.
 - **Daily challenge (Phase 28)** — one date-seeded rotating challenge pinned on
-  the Goals screen.
-- **Settings screen + audio polish** — no settings screen exists; add one for
-  global mute, reduce-motion, and a sandbox toggle. Consider countdown blips and
-  a low-fuel/warning tone.
+  the Goals screen; reuses the challenge engine.
+- **Settings screen** — global mute, reduce-motion, sandbox toggle in one place
+  (mute + sandbox currently live only in their contexts).
+- **Final polish & balancing (Phase 16)** — reconcile the sim's measured
+  `peakAccelG` into the report; a real difficulty playtest of the tier-2/3
+  challenges; a body silhouette in the 3D vehicle instead of a plain box.
 
-Also outstanding (small): reconcile the sim's measured `peakAccelG` into the
-report so the on-screen number matches the physics watched; and a real
-difficulty playtest of the tier-2/3 challenges (Featherweight, Stay Upright,
-The Fortress).
-
-Before starting: `npm install`, `npm run dev`, open at 393×852. Smoke path:
-Goals → attempt a challenge → Build → Run → 3D crash (with sound) →
-CHALLENGE COMPLETE → reward unlock. WebGL + a user gesture (for audio) required.
+Before starting: `npm install`, `npm run dev`, open at 393×852. Two smoke paths:
+(career) Goals → attempt a challenge → Build → Run → CHALLENGE COMPLETE; and
+(sandbox) Garage → Sandbox toggle → New Vehicle → Tuning tab → crank sliders →
+Crash. WebGL + a user gesture (for audio) required.
 
 ## Session log
 - **Session 1**: Scaffolded project; built app shell, parts DB, stat engine,
@@ -222,3 +233,8 @@ CHALLENGE COMPLETE → reward unlock. WebGL + a user gesture (for audio) require
   wired into the 3D sim and unlocked on the launch gesture; a mute toggle synced
   to the store. Added **3D game feel**: impact camera shake, a spark/debris
   burst, and tyre skid marks. Verified render + audio init with no errors.
+- **Session 5**: Added **sandbox / experiment mode** — a `Tuning` model (power/
+  mass/grip/downforce/wheel-size/CoG multipliers) applied in `deriveStats` and
+  threaded into the sim (`wheelScale`); a Career/Sandbox toggle on the Garage;
+  and a Builder Tuning tab (with budget + unlock gating dropped in sandbox).
+  Verified extreme builds (5× power, 2.5× wheels) crash correctly in 3D.
