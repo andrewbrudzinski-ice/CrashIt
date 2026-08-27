@@ -216,15 +216,55 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
       sparks.visible = false;
       scene.add(sparks);
 
+      // ---- Debris chunks: tumbling fragments that fly off & land on a big hit.
+      // Timeline-driven so they scrub with the replay. ----
+      const DEBRIS = 9;
+      const debrisColor = new THREE.Color(build.color);
+      const debris: { mesh: THREE.Mesh; vel: THREE.Vector3; spin: THREE.Vector3 }[] = [];
+      for (let i = 0; i < DEBRIS; i++) {
+        const sz = 0.12 + Math.random() * 0.22;
+        const mat = new THREE.MeshStandardMaterial({
+          color: i % 3 === 0 ? 0x1a1d22 : debrisColor, roughness: 0.6, metalness: 0.4,
+        });
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(sz, sz * 0.6, sz * 0.8), mat);
+        mesh.visible = false;
+        scene.add(mesh);
+        const a = Math.random() * Math.PI * 2;
+        const sp = 3 + Math.random() * 6;
+        debris.push({
+          mesh,
+          vel: new THREE.Vector3(Math.cos(a) * sp, 2 + Math.random() * 5, Math.sin(a) * sp),
+          spin: new THREE.Vector3((Math.random() - 0.5) * 12, (Math.random() - 0.5) * 12, (Math.random() - 0.5) * 12),
+        });
+      }
+
+      // ---- Smoke plume: grey points that rise & fade after a heavy impact. ----
+      const SMOKE = 24;
+      const smokePos = new Float32Array(SMOKE * 3);
+      const smokeSeed: THREE.Vector3[] = [];
+      for (let i = 0; i < SMOKE; i++) {
+        smokeSeed.push(new THREE.Vector3((Math.random() - 0.5) * 1.2, Math.random() * 0.4, (Math.random() - 0.5) * 1.2));
+      }
+      const smokeGeo = new THREE.BufferGeometry();
+      smokeGeo.setAttribute('position', new THREE.BufferAttribute(smokePos, 3));
+      const smokeMat = new THREE.PointsMaterial({ color: 0x3a3f45, size: 1.4, transparent: true, opacity: 0, depthWrite: false });
+      const smoke = new THREE.Points(smokeGeo, smokeMat);
+      smoke.visible = false;
+      scene.add(smoke);
+
       // Start engine + wind ambience (electric = different voice).
       audio.setMuted(useGame.getState().settings.muted);
       const reduceMotion = useGame.getState().settings.reduceMotion;
       audio.startAmbient(stats.engineKind === 'electric');
       cleanupFns.push(() => audio.stopAmbient());
 
+      // Debris/smoke only for a genuinely destructive crash.
+      const severe = !rec.clean && result.deformationPct > 35;
+
       const setup = {
         scene, camera, renderer, bodyGroups, flashLight, targetIdx, impactPos,
         skidMeshes, sparks, sparkMat, sparkPos, sparkVel, sparkGeo,
+        debris, smoke, smokeMat, smokePos, smokeSeed, smokeGeo, severe,
       };
 
       // ---- resize ----
@@ -342,6 +382,34 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
             }
             setup.sparkGeo.attributes.position.needsUpdate = true;
             setup.sparkMat.opacity = Math.max(0, 1 - sparkAge / life);
+          }
+        }
+
+        // Debris chunks + smoke plume — timeline-driven, so they scrub cleanly.
+        if (setup.severe) {
+          const it = Math.max(0, (cursorRef.current - r.impactFrame)) * r.dt; // s since impact
+          const show = cursorRef.current >= r.impactFrame;
+          for (const d of setup.debris) {
+            d.mesh.visible = show;
+            if (!show) continue;
+            d.mesh.position.set(
+              setup.impactPos.x + d.vel.x * it,
+              Math.max(0.05, setup.impactPos.y + d.vel.y * it - 4.9 * it * it),
+              setup.impactPos.z + d.vel.z * it,
+            );
+            d.mesh.rotation.set(d.spin.x * it, d.spin.y * it, d.spin.z * it);
+          }
+          setup.smoke.visible = show;
+          if (show) {
+            const arr = setup.smokePos;
+            for (let i = 0; i < setup.smokeSeed.length; i++) {
+              const s = setup.smokeSeed[i];
+              arr[i * 3] = setup.impactPos.x + s.x * (1 + it * 0.8);
+              arr[i * 3 + 1] = setup.impactPos.y + s.y + it * (1.1 + i * 0.03);
+              arr[i * 3 + 2] = setup.impactPos.z + s.z * (1 + it * 0.8);
+            }
+            setup.smokeGeo.attributes.position.needsUpdate = true;
+            setup.smokeMat.opacity = Math.max(0, 0.5 * Math.min(1, it * 3) - it * 0.16);
           }
         }
 

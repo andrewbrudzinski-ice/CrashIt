@@ -15,7 +15,7 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 12
+## Current status: END OF SESSION 13
 
 The core game loop is **playable end to end** with real-time 3D physics + sound,
 a challenge campaign + daily challenge, a **credits economy (crash for cash → buy
@@ -28,6 +28,17 @@ events, and a settings screen:
 **MODIFY** → **RUN AGAIN**, plus a **Goals** campaign that gates part unlocks,
 a **Sandbox** mode for absurd experiments, and **shareable build links + saved
 crash replays**.
+
+### New in Session 13 — crash flourishes (debris, smoke, shattered glass)
+- **Debris chunks**: ~9 paint-coloured/dark box fragments burst off a severe
+  crash (deformation > 35%), tumble with gravity, and land. **Timeline-driven**
+  (position from `cursor − impactFrame`), so they scrub cleanly with the replay.
+- **Smoke plume**: a grey point cloud rises and expands from the impact point,
+  fading over the seconds after the hit (also timeline-driven).
+- **Shattered glass**: in `carMesh3d.deform`, the greenhouse glass frosts toward
+  opaque grey (colour + roughness) under heavy front/roof damage — reversible.
+- All gated to genuinely destructive crashes; verified on a high-speed wall hit
+  in headless WebGL (debris flying + smoke plume + frosted glass), no errors.
 
 ### New in Session 12 — destruction-derby economy (crash for cash → upgrades)
 - **`payout.ts`**: a crash pays out **credits** from a destruction score (impact
@@ -301,19 +312,20 @@ later refinement.
 
 ---
 
-## Recommended next task (Session 13)
+## Recommended next task (Session 14)
 
 Pick one:
 
-- **Economy tuning + balance** — the payout curve is first-pass; play a few
-  loops and tune `payout.ts` constants + part costs so progression feels right
-  (not too fast/slow). Consider a "biggest payout" personal-best board from
-  `crashHistory`, and maybe a per-part **upgrade tier** (buy multiple levels).
-- **The Semi is now buyable in career** for ◈34,000 (no `startUnlocked`), so the
-  economy already gates it — but a dedicated "heavy haul" challenge or using it
-  as the oncoming mass in head-on/multi-car would show it off.
-- **Front-detail crash flourishes** — detach a bumper/wheel on severe front
-  damage; crack/darken glass on roof/front crush; a lingering smoke puff.
+- **Economy tuning + a "personal bests" board** — payout is first-pass; play a
+  few loops and tune `payout.ts` + part costs. Add a leaderboard-style screen
+  from `crashHistory` (biggest payout, safest, fastest, cheapest); maybe per-part
+  upgrade tiers (buy multiple levels).
+- **Debug/dev tools (Phase 30)** — hidden dev overlay (gravity, time scale,
+  force-crash, CoG/velocity vectors, hitboxes) behind a secret tap.
+- **Show off the semi** — a "heavy haul" challenge that rewards/uses
+  `chassis.semi`, or use it as the oncoming mass in head-on / multi-car.
+- **More derby feel** — screen-shake tuning, a slow-mo "hit stop" freeze frame at
+  impact, a bigger dust kick on jumps/drops.
 - **Front-detail flourishes on crash** — detach a bumper/wheel on severe front
   damage; crack/darken the glass on roof/front crush; a lingering smoke puff.
 - **Debug/dev tools (Phase 30)** — hidden dev overlay (gravity, time scale,
@@ -389,3 +401,6 @@ Recent Crashes → tap. WebGL + a user gesture (audio) required.
   crash's carnage into credits, the report shows a payout banner, and the Builder
   lets you **buy locked parts with credits** (wallet bar, "Tap to buy"). Crash →
   earn → upgrade → do more damage → earn more. Verified the full loop in WebGL.
+- **Session 13**: Added **crash flourishes** — tumbling paint-coloured debris
+  chunks, a rising/expanding smoke plume, and glass that frosts/shatters under
+  heavy damage. All timeline-driven (scrub cleanly) and gated to severe crashes.

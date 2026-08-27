@@ -272,8 +272,16 @@ export function buildCarMesh(
     addArches(group, offs, wheelRadius, W, mats);
   }
 
+  const glassBase = new THREE.Color(0x0b1a24);
+  const glassShattered = new THREE.Color(0xaebac4);
+
   const deform = (d: BodyDamage, t: number) => {
     if (crumple) crumple(d, t);
+    // Frost/shatter the glass under heavy front or roof damage.
+    const shatter = Math.max(0, Math.min(1, (Math.max(d.front, d.roof) / 100) * t));
+    mats.glass.color.copy(glassBase).lerp(glassShattered, shatter);
+    mats.glass.roughness = 0.08 + 0.74 * shatter;
+    mats.glass.metalness = 0.5 - 0.35 * shatter;
     for (const it of details) {
       const fr = d.front / 100, re = d.rear / 100, ro = d.roof / 100, le = d.left / 100, ri = d.right / 100;
       let dx = 0, dy = 0, dz = 0;
