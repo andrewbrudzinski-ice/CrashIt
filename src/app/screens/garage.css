@@ -155,6 +155,50 @@
 }
 .garage-action.danger { color: var(--c-red); }
 
+.garage-share {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(6, 8, 11, 0.6);
+  border: 1px solid var(--c-line);
+  font-size: 13px;
+  display: grid;
+  place-items: center;
+}
+
+/* Recent crashes / replays */
+.garage-replays { margin-top: 26px; }
+.garage-section-h {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-text-dim);
+  margin-bottom: 12px;
+}
+.replay-list { display: flex; flex-direction: column; gap: 8px; }
+.replay-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--c-surface-1);
+  border: 1px solid var(--c-line);
+  transition: transform var(--dur-fast), border-color var(--dur-fast);
+}
+.replay-card:active { transform: scale(0.99); border-color: var(--c-surface-4); }
+.replay-icon { font-size: 22px; flex: 0 0 auto; }
+.replay-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.replay-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.replay-scn { font-size: 11px; color: var(--c-text-faint); }
+.replay-verdict { font-size: 11px; font-weight: 800; letter-spacing: 0.04em; flex: 0 0 auto; }
+.replay-play { font-size: 12px; color: var(--c-cyan); flex: 0 0 auto; }
+
 .garage-empty {
   text-align: center;
   padding: 60px 20px;

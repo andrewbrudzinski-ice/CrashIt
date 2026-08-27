@@ -1,7 +1,11 @@
+import { useState } from 'react';
 import { useGame } from '../../state/store';
 import { deriveStats } from '../../game/vehicle/deriveStats';
 import { shareCode } from '../../game/vehicle/vehicleModel';
+import { getScenario } from '../../game/scenarios/scenarios';
+import type { VehicleBuild } from '../../game/parts/types';
 import { VehicleSilhouette } from '../../components/vehicle/VehicleSilhouette';
+import { ShareCard } from '../../components/share/ShareCard';
 import { fmt, money, ratingColor } from '../../lib/format';
 import { BUILD_BUDGET } from '../../game/vehicle/vehicleModel';
 import './garage.css';
@@ -15,6 +19,9 @@ export function GarageScreen() {
   const sandbox = useGame((s) => s.settings.sandbox);
   const setSandbox = useGame((s) => s.setSandbox);
   const updateBuild = useGame((s) => s.updateBuild);
+  const crashHistory = useGame((s) => s.crashHistory);
+  const startReplay = useGame((s) => s.startReplay);
+  const [shareBuild, setShareBuild] = useState<VehicleBuild | null>(null);
 
   const handleNew = () => {
     const id = createBuild();
@@ -54,6 +61,11 @@ export function GarageScreen() {
                 <div className="garage-thumb blueprint-grid">
                   <VehicleSilhouette build={b} rideHeight={stats.rideHeight} />
                   <span className="garage-code mono">#{shareCode(b.id)}</span>
+                  <button
+                    className="garage-share"
+                    onClick={(e) => { e.stopPropagation(); setShareBuild(b); }}
+                    aria-label="Share build"
+                  >🔗</button>
                 </div>
                 <div className="garage-meta">
                   <div className="garage-row">
@@ -106,7 +118,42 @@ export function GarageScreen() {
             <p className="dim">Build one, then send it into a wall.</p>
           </div>
         )}
+
+        {crashHistory.length > 0 && (
+          <section className="garage-replays">
+            <h3 className="garage-section-h">Recent Crashes</h3>
+            <div className="replay-list">
+              {crashHistory.slice(0, 12).map((rec) => {
+                const scn = getScenario(rec.config.scenarioId);
+                const survPct = Math.round(rec.result.survival * 100);
+                const verdict = rec.result.survivedClean ? 'PASSED'
+                  : survPct >= 60 ? 'SURVIVED' : survPct >= 25 ? 'CRITICAL' : 'FATAL';
+                const vColor = rec.result.survivedClean || survPct >= 60 ? 'var(--c-lime)'
+                  : survPct >= 25 ? 'var(--c-amber)' : 'var(--c-red)';
+                return (
+                  <button key={rec.id} className="replay-card" onClick={() => startReplay(rec)}>
+                    <span className="replay-icon">{scn?.icon}</span>
+                    <div className="replay-info">
+                      <span className="replay-name">{rec.build.name}</span>
+                      <span className="replay-scn">{scn?.name}{!rec.result.survivedClean && ` · ${rec.result.impactSpeedKmh} km/h`}</span>
+                    </div>
+                    <span className="replay-verdict" style={{ color: vColor }}>{verdict}</span>
+                    <span className="replay-play">▶</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </div>
+
+      {shareBuild && (
+        <ShareCard
+          build={shareBuild}
+          result={crashHistory.find((c) => c.build.id === shareBuild.id)?.result}
+          onClose={() => setShareBuild(null)}
+        />
+      )}
     </div>
   );
 }

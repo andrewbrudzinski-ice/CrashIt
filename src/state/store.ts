@@ -8,6 +8,8 @@ import {
   createDefaultBuild,
   makeId,
 } from '../game/vehicle/vehicleModel';
+import type { ScenarioConfig } from '../game/scenarios/scenarios';
+import type { CrashResult } from '../game/crash/crashModel';
 
 export type Screen = 'garage' | 'builder' | 'test' | 'lab' | 'challenges';
 
@@ -15,6 +17,18 @@ export interface ChallengeRecord {
   stars: number;
   completedAt: number;
 }
+
+/** A saved crash — a build snapshot + scenario + result. Replays by re-simming
+ * deterministically from the build + config, so no recording is stored. */
+export interface CrashRecord {
+  id: string;
+  build: VehicleBuild;
+  config: ScenarioConfig;
+  result: CrashResult;
+  at: number;
+}
+
+const MAX_HISTORY = 24;
 
 interface Settings {
   muted: boolean;
@@ -37,6 +51,10 @@ interface GameState {
   challengeProgress: Record<string, ChallengeRecord>;
   /** The challenge currently being attempted (locks scenario, adds goals). */
   activeChallengeId: string | null;
+  /** Saved crashes, newest first. */
+  crashHistory: CrashRecord[];
+  /** A crash currently being replayed as a full-screen overlay. */
+  replay: CrashRecord | null;
 
   // --- navigation ---
   setScreen: (s: Screen) => void;
@@ -47,6 +65,13 @@ interface GameState {
   exitChallenge: () => void;
   completeChallenge: (challengeId: string, stars: number, rewardParts?: string[]) => boolean;
   isPartUnlocked: (partId: string) => boolean;
+
+  // --- crash history / replay / sharing ---
+  recordCrash: (build: VehicleBuild, config: ScenarioConfig, result: CrashResult) => void;
+  startReplay: (record: CrashRecord) => void;
+  endReplay: () => void;
+  deleteCrash: (id: string) => void;
+  importBuild: (build: VehicleBuild, open?: boolean) => string;
 
   // --- build CRUD ---
   createBuild: (name?: string) => string;
@@ -83,6 +108,8 @@ export const useGame = create<GameState>()(
       unlockedParts: [],
       challengeProgress: {},
       activeChallengeId: null,
+      crashHistory: [],
+      replay: null,
 
       setScreen: (s) => set({ screen: s }),
       openBuilder: (buildId) => set({ activeBuildId: buildId, screen: 'builder' }),
@@ -119,6 +146,28 @@ export const useGame = create<GameState>()(
         if (!p) return false;
         if (p.startUnlocked) return true;
         return get().unlockedParts.includes(partId);
+      },
+
+      recordCrash: (build, config, result) => {
+        const record: CrashRecord = {
+          id: makeId('crash'),
+          // Snapshot the build so the replay survives later edits/deletion.
+          build: { ...build, parts: { ...build.parts }, safety: [...build.safety], aero: [...build.aero] },
+          config: { scenarioId: config.scenarioId, params: { ...config.params } },
+          result,
+          at: Date.now(),
+        };
+        set((st) => ({ crashHistory: [record, ...st.crashHistory].slice(0, MAX_HISTORY) }));
+      },
+
+      startReplay: (record) => set({ replay: record }),
+      endReplay: () => set({ replay: null }),
+      deleteCrash: (id) => set((st) => ({ crashHistory: st.crashHistory.filter((c) => c.id !== id) })),
+
+      importBuild: (build, open = true) => {
+        set((st) => ({ builds: [build, ...st.builds] }));
+        if (open) set({ activeBuildId: build.id, screen: 'builder' });
+        return build.id;
       },
 
       createBuild: (name) => {
@@ -215,6 +264,7 @@ export const useGame = create<GameState>()(
         settings: st.settings,
         unlockedParts: st.unlockedParts,
         challengeProgress: st.challengeProgress,
+        crashHistory: st.crashHistory,
       }),
     },
   ),

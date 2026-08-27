@@ -15,15 +15,31 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 5
+## Current status: END OF SESSION 6
 
 The core game loop is **playable end to end with real-time 3D physics + sound, a
-challenge campaign, progression, and a sandbox/experiment mode**:
+challenge campaign, progression, a sandbox mode, and shareable builds + replays**:
 
 **BUILD** (Garage + Builder) → **TEST** (scenario + params) → **CRASH**
 (3D Rapier sim, sound + cinematic + replay) → **ANALYZE** (engineering report) →
-**MODIFY** → **RUN AGAIN**, plus a **Goals** campaign that gates part unlocks and
-a **Sandbox** mode for absurd experiments.
+**MODIFY** → **RUN AGAIN**, plus a **Goals** campaign that gates part unlocks,
+a **Sandbox** mode for absurd experiments, and **shareable build links + saved
+crash replays**.
+
+### New in Session 6 — sharing & replays (Phase 13 + 24)
+- **Crash history** (persisted, capped 24): every crash snapshots its build +
+  scenario config + result. Replays re-run the sim deterministically from that —
+  no recording stored (`recordCrash`, `crashHistory`).
+- **Recent Crashes** list on the Garage: tap a card to replay the crash in 3D
+  (via a global `ReplayHost` overlay) and see its report again.
+- **Shareable build links** (`shareCodec.ts`): a build encodes to a URL-safe
+  hash (`#b=…`), decodes to a fresh copy. Opening a shared link shows an
+  import prompt.
+- **Share card** (`ShareCard`): a polished, screenshot-ready card — silhouette,
+  key stats, last-crash verdict badge, and a Copy-Link button — opened from a
+  🔗 button on each garage card.
+- Verified the full share → copy-link → open-link → import, and the replay,
+  loops in headless WebGL. No page errors.
 
 ### New in Session 5 — sandbox / experiment mode (Phase 19)
 - **Tuning model** (`Tuning` on `VehicleBuild`): multipliers/offsets for engine
@@ -179,8 +195,8 @@ later refinement.
 | 9 | Crash analysis | ✅ done (report) |
 | 10 | Challenges | ✅ done (8 challenges, 3 tiers, ★ ratings) |
 | 11 | Progression / unlocks | ✅ done (part unlocks via challenges, gated builder) |
-| 12 | Persistence | 🟨 builds+settings+unlocks+challenge progress persisted; replays not stored |
-| 13 | Leaderboards / shareability | ⬜ (share codes generated, no UI/backend) |
+| 12 | Persistence | ✅ builds, settings, unlocks, challenge progress & crash history persisted |
+| 13 | Leaderboards / shareability | 🟨 shareable build links + share card done; leaderboards need a backend |
 | 14 | Audio | ✅ done (procedural engine/wind/screech/impact/glass/metal + mute) |
 | 15 | Mobile optimization | 🟨 mobile-first + lazy 3D chunk; perf pass on device later |
 | 16 | Final polish & balancing | ⬜ |
@@ -188,27 +204,29 @@ later refinement.
 
 ---
 
-## Recommended next task (Session 6)
+## Recommended next task (Session 7)
 
 Pick one; all are self-contained:
 
-- **Shareable build card + crash replay persistence (Phase 13 + 24)** — persist
-  the last crash's build+scenario (re-simmed deterministically, so no need to
-  store the whole `SimRecording`) so old crashes replay from the garage;
-  generate a share card (name, key stats, crash verdict) from the existing
-  `shareCode`. High viral value.
-- **Daily challenge (Phase 28)** — one date-seeded rotating challenge pinned on
-  the Goals screen; reuses the challenge engine.
-- **Settings screen** — global mute, reduce-motion, sandbox toggle in one place
-  (mute + sandbox currently live only in their contexts).
+- **Daily challenge (Phase 28)** — one date-seeded rotating challenge pinned at
+  the top of the Goals screen; reuses the challenge engine (seed the scenario +
+  params + goals from the date). Small, gives a reason to return.
+- **Settings screen** — global mute, reduce-motion, sandbox toggle, and a
+  "reset progress" in one place (mute + sandbox currently live only in their
+  contexts). Add a nav/entry point (maybe a gear in the Garage header).
 - **Final polish & balancing (Phase 16)** — reconcile the sim's measured
-  `peakAccelG` into the report; a real difficulty playtest of the tier-2/3
-  challenges; a body silhouette in the 3D vehicle instead of a plain box.
+  `peakAccelG` into the report so the on-screen number matches the physics
+  watched; a real difficulty playtest of the tier-2/3 challenges; give the 3D
+  vehicle a proper body silhouette instead of a plain box (extrude the SVG
+  profile or add fenders/hood shaping).
+- **Randomized events (Phase 25)** — wet track, crosswind, tyre blowout, brake
+  fade as opt-in scenario modifiers, clearly flagged, feeding a seed into the
+  (currently deterministic) sim.
 
-Before starting: `npm install`, `npm run dev`, open at 393×852. Two smoke paths:
-(career) Goals → attempt a challenge → Build → Run → CHALLENGE COMPLETE; and
-(sandbox) Garage → Sandbox toggle → New Vehicle → Tuning tab → crank sliders →
-Crash. WebGL + a user gesture (for audio) required.
+Before starting: `npm install`, `npm run dev`, open at 393×852. Smoke paths:
+(career) Goals → attempt → Build → Run → COMPLETE; (sandbox) Garage → Sandbox →
+New → Tuning → Crash; (share) crash once → Garage → 🔗 on a card → Copy Link,
+and Recent Crashes → tap to replay. WebGL + a user gesture (audio) required.
 
 ## Session log
 - **Session 1**: Scaffolded project; built app shell, parts DB, stat engine,
@@ -238,3 +256,8 @@ Crash. WebGL + a user gesture (for audio) required.
   threaded into the sim (`wheelScale`); a Career/Sandbox toggle on the Garage;
   and a Builder Tuning tab (with budget + unlock gating dropped in sandbox).
   Verified extreme builds (5× power, 2.5× wheels) crash correctly in 3D.
+- **Session 6**: Added **sharing & replays** — persisted crash history with a
+  Recent Crashes list that replays saved crashes in 3D (`ReplayHost`,
+  deterministic re-sim); URL-hash build sharing (`shareCodec`) with an import
+  prompt; and a screenshot-ready `ShareCard`. Verified the share→import and
+  replay round-trips end-to-end in headless WebGL.

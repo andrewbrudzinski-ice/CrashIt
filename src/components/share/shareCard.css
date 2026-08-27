@@ -1,0 +1,90 @@
+.sharecard-backdrop {
+  position: fixed;
+  top: 0; bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--app-max-w);
+  z-index: 160;
+  background: rgba(6, 8, 11, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: sc-fade var(--dur-fast) var(--ease-out);
+}
+@keyframes sc-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.sharecard {
+  width: 100%;
+  max-width: 360px;
+  animation: sc-pop var(--dur-med) var(--ease-out);
+}
+@keyframes sc-pop { from { transform: scale(0.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.sharecard-inner {
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(55, 224, 216, 0.08), transparent 60%),
+    var(--c-surface-1);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-xl);
+  padding: 18px;
+  box-shadow: var(--shadow-3);
+}
+
+.sharecard-head { display: flex; justify-content: space-between; align-items: center; }
+.sharecard-eyebrow { font-size: 9px; letter-spacing: 0.18em; color: var(--c-hazard); font-weight: 800; }
+.sharecard-code {
+  font-size: 12px; font-weight: 700; color: var(--c-cyan);
+  background: rgba(6, 8, 11, 0.6); border: 1px solid var(--c-line);
+  padding: 2px 8px; border-radius: var(--r-pill);
+}
+
+.sharecard-name { font-size: 24px; font-weight: 800; margin-top: 8px; letter-spacing: -0.01em; }
+.sharecard-sandbox {
+  display: inline-block; margin-top: 4px;
+  font-size: 9px; letter-spacing: 0.12em; font-weight: 800; color: var(--c-violet);
+  border: 1px solid var(--c-violet); border-radius: var(--r-pill); padding: 2px 8px;
+}
+
+.sharecard-art {
+  margin: 10px 0 6px;
+  padding: 6px;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-line-soft);
+  border-radius: var(--r-lg);
+}
+
+.sharecard-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.sharecard-cell {
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-line-soft);
+  border-radius: var(--r-sm);
+  padding: 8px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.sharecard-cell-label { font-size: 8px; letter-spacing: 0.08em; color: var(--c-text-faint); font-weight: 700; }
+.sharecard-cell-value { font-size: 16px; font-weight: 800; color: var(--c-text); }
+.sharecard-cell-unit { font-size: 9px; color: var(--c-text-faint); margin-left: 2px; font-weight: 600; }
+
+.sharecard-verdict {
+  text-align: center;
+  font-size: 14px; font-weight: 800; letter-spacing: 0.05em;
+  border: 1px solid; border-radius: var(--r-md);
+  padding: 8px; margin-bottom: 10px;
+}
+.sharecard-surv { font-weight: 700; }
+
+.sharecard-foot {
+  text-align: center; font-size: 10px; letter-spacing: 0.14em;
+  color: var(--c-text-faint); text-transform: uppercase;
+}
+
+.sharecard-actions { display: flex; gap: 8px; margin-top: 12px; }
+.sharecard-actions .btn { flex: 1; height: 46px; }
+.sharecard-actions .btn-primary { flex: 1.3; }

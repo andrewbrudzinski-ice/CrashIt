@@ -54,6 +54,7 @@ src/
     vehicle/
       vehicleModel.ts         Build factory, ids, share codes, budget
       deriveStats.ts          Build → VehicleStats (the stat engine)
+      shareCodec.ts           Build ↔ URL-safe code (link sharing / import)
     scenarios/scenarios.ts    Scenario defs + params + ScenarioConfig
     crash/crashModel.ts       Analytical crash → CrashResult (scored outcome)
     sim/crashSim.ts           Rapier3D pre-simulation → baked SimRecording

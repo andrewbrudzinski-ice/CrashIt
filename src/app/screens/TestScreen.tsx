@@ -28,6 +28,7 @@ export function TestScreen() {
   const activeChallengeId = useGame((s) => s.activeChallengeId);
   const exitChallenge = useGame((s) => s.exitChallenge);
   const completeChallenge = useGame((s) => s.completeChallenge);
+  const recordCrash = useGame((s) => s.recordCrash);
   const challenge = getChallenge(activeChallengeId);
 
   const [scenarioId, setScenarioId] = useState<string>('frontal');
@@ -74,6 +75,7 @@ export function TestScreen() {
   };
 
   const onSimComplete = () => {
+    if (result) recordCrash(build, effConfig, result);
     if (challenge && result) {
       const ev = evaluateChallenge(challenge, stats, result);
       setChallengeEval(ev);

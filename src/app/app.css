@@ -178,3 +178,33 @@
   padding: 2px 0;
 }
 .chip-row::-webkit-scrollbar { display: none; }
+
+/* ---- Shared-build import prompt ---- */
+.import-backdrop {
+  position: fixed;
+  top: 0; bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--app-max-w);
+  z-index: 170;
+  background: rgba(6, 8, 11, 0.7);
+  display: flex;
+  align-items: flex-end;
+}
+.import-sheet {
+  width: 100%;
+  background: var(--c-surface-1);
+  border-top: 1px solid var(--c-line);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  padding: 22px 18px calc(20px + var(--safe-bottom));
+  box-shadow: var(--shadow-3);
+  animation: sheet-up var(--dur-med) var(--ease-out);
+}
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.import-title { font-size: 10px; letter-spacing: 0.16em; color: var(--c-hazard); font-weight: 800; text-transform: uppercase; }
+.import-name { font-size: 22px; font-weight: 800; margin-top: 4px; }
+.import-desc { font-size: 13px; color: var(--c-text-dim); margin: 8px 0 16px; }
+.import-actions { display: flex; gap: 8px; }
+.import-actions .btn { flex: 1; height: 48px; }
+.import-actions .btn-primary { flex: 1.4; }
