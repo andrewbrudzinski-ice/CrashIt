@@ -1,15 +1,18 @@
 import type { CrashResult } from '../../game/crash/crashModel';
+import { carnageRating } from '../../game/economy/payout';
 import { fmt, ratingColor } from '../../lib/format';
 import './crashReport.css';
 
 interface Props {
   result: CrashResult;
+  /** Credits earned from this crash (shown as an "earned" banner). */
+  payout?: number;
   onClose: () => void;
   onModify: () => void;
   onRerun: () => void;
 }
 
-export function CrashReport({ result: r, onClose, onModify, onRerun }: Props) {
+export function CrashReport({ result: r, payout, onClose, onModify, onRerun }: Props) {
   const survivalPct = Math.round(r.survival * 100);
   const survColor = ratingColor(survivalPct);
   const verdict = r.survivedClean
@@ -31,6 +34,16 @@ export function CrashReport({ result: r, onClose, onModify, onRerun }: Props) {
             </div>
           )}
         </div>
+
+        {payout !== undefined && payout > 0 && (
+          <div className="report-payout">
+            <div className="report-payout-left">
+              <span className="report-payout-label">{carnageRating(payout)}</span>
+              <span className="report-payout-sub">Damage payout</span>
+            </div>
+            <span className="report-payout-amount mono">+◈{fmt(payout)}</span>
+          </div>
+        )}
 
         {!r.survivedClean && (
           <div className="report-hero-grid">

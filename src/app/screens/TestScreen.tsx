@@ -11,6 +11,7 @@ import {
 import { computeCrash, type CrashResult } from '../../game/crash/crashModel';
 import { getChallenge, evaluateChallenge, type ChallengeEval } from '../../game/challenges/challenges';
 import { CONDITIONS, getCondition } from '../../game/scenarios/conditions';
+import { computePayout } from '../../game/economy/payout';
 import { audio } from '../../game/audio/audio';
 import { VehicleSilhouette } from '../../components/vehicle/VehicleSilhouette';
 import { CrashReport } from '../../components/crash/CrashReport';
@@ -30,6 +31,7 @@ export function TestScreen() {
   const exitChallenge = useGame((s) => s.exitChallenge);
   const completeChallenge = useGame((s) => s.completeChallenge);
   const recordCrash = useGame((s) => s.recordCrash);
+  const earnCredits = useGame((s) => s.earnCredits);
   const challenge = getChallenge(activeChallengeId);
 
   const [scenarioId, setScenarioId] = useState<string>('frontal');
@@ -40,6 +42,7 @@ export function TestScreen() {
   const [result, setResult] = useState<CrashResult | null>(null);
   const [challengeEval, setChallengeEval] = useState<ChallengeEval | null>(null);
   const [rewardGranted, setRewardGranted] = useState(false);
+  const [payout, setPayout] = useState(0);
 
   const stats = useMemo(() => (build ? deriveStats(build) : null), [build]);
 
@@ -92,7 +95,12 @@ export function TestScreen() {
   const activeConfig = runConfig ?? effConfig;
 
   const onSimComplete = () => {
-    if (result) recordCrash(build, activeConfig, result);
+    if (result) {
+      const pay = computePayout(result, scenario.tier);
+      setPayout(pay);
+      earnCredits(pay);
+      recordCrash(build, activeConfig, result, pay);
+    }
     if (challenge && result) {
       const ev = evaluateChallenge(challenge, stats, result);
       setChallengeEval(ev);
@@ -260,6 +268,7 @@ export function TestScreen() {
       {mode === 'report' && result && (
         <CrashReport
           result={result}
+          payout={payout}
           onClose={() => setMode(challenge ? 'challengeResult' : 'select')}
           onModify={() => { setMode('select'); setScreen('builder'); }}
           onRerun={() => { const r = computeCrash(stats, activeConfig); if (r) { setResult(r); setMode('running'); } }}

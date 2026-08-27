@@ -44,6 +44,24 @@
 }
 .report-survival { font-size: 13px; color: var(--c-text-dim); font-weight: 600; }
 
+.report-payout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: var(--r-lg);
+  background: linear-gradient(135deg, rgba(255, 204, 51, 0.16), rgba(255, 204, 51, 0.04));
+  border: 1px solid rgba(255, 204, 51, 0.4);
+  animation: payout-pop var(--dur-med) var(--ease-out) both;
+}
+@keyframes payout-pop { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.report-payout-left { display: flex; flex-direction: column; gap: 2px; }
+.report-payout-label { font-size: 15px; font-weight: 800; letter-spacing: 0.04em; color: var(--c-amber); }
+.report-payout-sub { font-size: 11px; color: var(--c-text-faint); }
+.report-payout-amount { font-size: 24px; font-weight: 800; color: var(--c-amber); text-shadow: 0 0 16px rgba(255, 204, 51, 0.4); }
+
 .report-hero-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

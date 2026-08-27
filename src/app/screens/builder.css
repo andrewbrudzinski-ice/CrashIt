@@ -61,8 +61,13 @@
 }
 
 .part-card[data-locked='true'] {
-  opacity: 0.62;
+  opacity: 0.6;
   filter: grayscale(0.4);
+}
+.part-card[data-buyable='true'] {
+  opacity: 0.95;
+  filter: none;
+  border-color: rgba(255, 204, 51, 0.4);
 }
 .part-lock-badge { font-size: 12px; }
 .part-unlock-hint {
@@ -72,6 +77,33 @@
   text-align: right;
   line-height: 1.3;
 }
+.part-buy {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--c-text-faint);
+}
+.part-buy[data-afford='true'] { color: var(--c-amber); }
+.part-buy-action {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--c-text-faint);
+  text-align: right;
+}
+.part-card[data-buyable='true'] .part-buy-action { color: var(--c-amber); }
+
+.builder-wallet {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 16px 4px;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  background: rgba(255, 204, 51, 0.07);
+  border: 1px solid rgba(255, 204, 51, 0.22);
+}
+.builder-wallet-label { font-size: 9px; letter-spacing: 0.12em; font-weight: 800; color: var(--c-amber); }
+.builder-wallet-amt { font-size: 15px; font-weight: 800; color: var(--c-amber); }
+.builder-wallet-hint { font-size: 10px; color: var(--c-text-faint); margin-left: auto; }
 
 .builder-preview {
   position: relative;

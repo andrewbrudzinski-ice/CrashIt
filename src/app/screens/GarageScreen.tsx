@@ -22,6 +22,7 @@ export function GarageScreen() {
   const updateBuild = useGame((s) => s.updateBuild);
   const crashHistory = useGame((s) => s.crashHistory);
   const startReplay = useGame((s) => s.startReplay);
+  const credits = useGame((s) => s.credits);
   const [shareBuild, setShareBuild] = useState<VehicleBuild | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -38,7 +39,7 @@ export function GarageScreen() {
           <div className="screen-eyebrow">{sandbox ? 'Experiment Lab' : 'Crash Lab'}</div>
           <div className="garage-brand mono">{sandbox ? 'SANDBOX' : 'MY GARAGE'}</div>
         </div>
-        <span className="pill">{builds.length} builds</span>
+        <span className="pill garage-credits">◈ {fmt(credits)}</span>
         <button className="garage-gear" onClick={() => setShowSettings(true)} aria-label="Settings">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3" />
@@ -143,7 +144,10 @@ export function GarageScreen() {
                     <span className="replay-icon">{scn?.icon}</span>
                     <div className="replay-info">
                       <span className="replay-name">{rec.build.name}</span>
-                      <span className="replay-scn">{scn?.name}{!rec.result.survivedClean && ` · ${rec.result.impactSpeedKmh} km/h`}</span>
+                      <span className="replay-scn">
+                        {scn?.name}
+                        {rec.payout ? <span className="replay-pay"> · +◈{fmt(rec.payout)}</span> : null}
+                      </span>
                     </div>
                     <span className="replay-verdict" style={{ color: vColor }}>{verdict}</span>
                     <span className="replay-play">▶</span>

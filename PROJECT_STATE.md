@@ -15,18 +15,37 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 11
+## Current status: END OF SESSION 12
 
 The core game loop is **playable end to end** with real-time 3D physics + sound,
-a challenge campaign + daily challenge, progression, a sandbox mode, shareable
-builds + replays, **detailed 3D vehicles (8 distinct types incl. a semi) that
-crumple per the damage map**, environmental/random events, and a settings screen:
+a challenge campaign + daily challenge, a **credits economy (crash for cash → buy
+upgrades)**, progression, a sandbox mode, shareable builds + replays, detailed 3D
+vehicles (8 types incl. a semi) that crumple per the damage map, environmental
+events, and a settings screen:
 
 **BUILD** (Garage + Builder) → **TEST** (scenario + params) → **CRASH**
 (3D Rapier sim, sound + cinematic + replay) → **ANALYZE** (engineering report) →
 **MODIFY** → **RUN AGAIN**, plus a **Goals** campaign that gates part unlocks,
 a **Sandbox** mode for absurd experiments, and **shareable build links + saved
 crash replays**.
+
+### New in Session 12 — destruction-derby economy (crash for cash → upgrades)
+- **`payout.ts`**: a crash pays out **credits** from a destruction score (impact
+  energy + deformation + component damage + peak-G + rollover bonus × scenario
+  tier). Bigger/faster/heavier crashes pay more — so buying power/mass/grip
+  upgrades to do more damage directly earns more. `carnageRating` labels it
+  (FENDER BENDER → CATASTROPHIC). Starting wallet 8,000 (`STARTING_CREDITS`).
+- **Store**: `credits` (persisted), `earnCredits`, `buyPart(id)` (unlock a part
+  by paying its cost); `recordCrash` and `CrashRecord` now carry the payout;
+  `resetProgress` resets credits.
+- **Flow**: `TestScreen` computes payout on crash → earns + records + shows it;
+  the **crash report** gets an amber "SOLID HIT · +◈X" payout banner; replays
+  show the stored payout without re-earning.
+- **Builder**: a CREDITS wallet bar; locked parts show "◈ price · Tap to buy" —
+  affordable ones are amber & buyable (buying unlocks + equips + deducts). The
+  Garage header shows the balance; Recent Crashes show each payout.
+- Verified end-to-end in headless WebGL: 8,000 → crash +3,310 → 11,310 → buy a
+  part −4,200 → 7,110, all reflected live. No page errors.
 
 ### New in Session 11 — detailed vehicles + a semi (Phase 4 visual, deep)
 - **`carMesh3d.ts` rebuilt** into a procedural vehicle builder that dresses the
@@ -282,14 +301,19 @@ later refinement.
 
 ---
 
-## Recommended next task (Session 12)
+## Recommended next task (Session 13)
 
 Pick one:
 
-- **Make the Semi reachable in career** — it's `chassis.semi` (not
-  `startUnlocked`), so it's only usable in Sandbox today. Add a challenge that
-  rewards it (or a "heavy vehicles" unlock), and consider a matching new
-  scenario (e.g. it as the oncoming mass in head-on / multi-car).
+- **Economy tuning + balance** — the payout curve is first-pass; play a few
+  loops and tune `payout.ts` constants + part costs so progression feels right
+  (not too fast/slow). Consider a "biggest payout" personal-best board from
+  `crashHistory`, and maybe a per-part **upgrade tier** (buy multiple levels).
+- **The Semi is now buyable in career** for ◈34,000 (no `startUnlocked`), so the
+  economy already gates it — but a dedicated "heavy haul" challenge or using it
+  as the oncoming mass in head-on/multi-car would show it off.
+- **Front-detail crash flourishes** — detach a bumper/wheel on severe front
+  damage; crack/darken glass on roof/front crush; a lingering smoke puff.
 - **Front-detail flourishes on crash** — detach a bumper/wheel on severe front
   damage; crack/darken the glass on roof/front crush; a lingering smoke puff.
 - **Debug/dev tools (Phase 30)** — hidden dev overlay (gravity, time scale,
@@ -361,3 +385,7 @@ Recent Crashes → tap. WebGL + a user gesture (audio) required.
   wheels), added a proper **pickup (open bed)** and a new **Semi Tractor-Trailer**
   (tractor cab + stacks + fuel tank + box trailer + 5 axles; new `chassis.semi`),
   and made the crash camera auto-scale to vehicle length. 8 distinct types now.
+- **Session 12**: Added a **destruction-derby economy** — `payout.ts` turns a
+  crash's carnage into credits, the report shows a payout banner, and the Builder
+  lets you **buy locked parts with credits** (wallet bar, "Tap to buy"). Crash →
+  earn → upgrade → do more damage → earn more. Verified the full loop in WebGL.

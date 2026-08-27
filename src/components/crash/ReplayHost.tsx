@@ -30,6 +30,7 @@ function ReplayInner({ record, onExit }: { record: CrashRecord; onExit: () => vo
     return (
       <CrashReport
         result={record.result}
+        payout={record.payout}
         onClose={onExit}
         onModify={onExit}
         onRerun={() => setMode('sim')}

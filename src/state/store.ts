@@ -10,6 +10,7 @@ import {
 } from '../game/vehicle/vehicleModel';
 import type { ScenarioConfig } from '../game/scenarios/scenarios';
 import type { CrashResult } from '../game/crash/crashModel';
+import { STARTING_CREDITS } from '../game/economy/payout';
 
 export type Screen = 'garage' | 'builder' | 'test' | 'lab' | 'challenges';
 
@@ -25,6 +26,8 @@ export interface CrashRecord {
   build: VehicleBuild;
   config: ScenarioConfig;
   result: CrashResult;
+  /** Credits earned from this crash. */
+  payout: number;
   at: number;
 }
 
@@ -45,6 +48,8 @@ interface GameState {
   settings: Settings;
 
   // --- progression ---
+  /** Earned currency, spent to unlock parts. */
+  credits: number;
   /** Part ids unlocked beyond the default `startUnlocked` set. */
   unlockedParts: string[];
   /** challengeId → best result. */
@@ -66,8 +71,13 @@ interface GameState {
   completeChallenge: (challengeId: string, stars: number, rewardParts?: string[]) => boolean;
   isPartUnlocked: (partId: string) => boolean;
 
+  // --- economy ---
+  earnCredits: (amount: number) => void;
+  /** Unlock a part by paying its cost in credits. Returns true on success. */
+  buyPart: (partId: string) => boolean;
+
   // --- crash history / replay / sharing ---
-  recordCrash: (build: VehicleBuild, config: ScenarioConfig, result: CrashResult) => void;
+  recordCrash: (build: VehicleBuild, config: ScenarioConfig, result: CrashResult, payout: number) => void;
   startReplay: (record: CrashRecord) => void;
   endReplay: () => void;
   deleteCrash: (id: string) => void;
@@ -107,6 +117,7 @@ export const useGame = create<GameState>()(
       activeBuildId: null,
       screen: 'garage',
       settings: { muted: false, sandbox: false, reduceMotion: false },
+      credits: STARTING_CREDITS,
       unlockedParts: [],
       challengeProgress: {},
       activeChallengeId: null,
@@ -150,13 +161,29 @@ export const useGame = create<GameState>()(
         return get().unlockedParts.includes(partId);
       },
 
-      recordCrash: (build, config, result) => {
+      earnCredits: (amount) => set((st) => ({ credits: st.credits + Math.max(0, Math.round(amount)) })),
+
+      buyPart: (partId) => {
+        const part = getPart(partId);
+        if (!part) return false;
+        const st = get();
+        if (st.isPartUnlocked(partId)) return true; // already owned
+        if (st.credits < part.cost) return false;
+        set((s) => ({
+          credits: s.credits - part.cost,
+          unlockedParts: s.unlockedParts.includes(partId) ? s.unlockedParts : [...s.unlockedParts, partId],
+        }));
+        return true;
+      },
+
+      recordCrash: (build, config, result, payout) => {
         const record: CrashRecord = {
           id: makeId('crash'),
           // Snapshot the build so the replay survives later edits/deletion.
           build: { ...build, parts: { ...build.parts }, safety: [...build.safety], aero: [...build.aero] },
           config: { scenarioId: config.scenarioId, params: { ...config.params } },
           result,
+          payout,
           at: Date.now(),
         };
         set((st) => ({ crashHistory: [record, ...st.crashHistory].slice(0, MAX_HISTORY) }));
@@ -261,6 +288,7 @@ export const useGame = create<GameState>()(
           challengeProgress: {},
           unlockedParts: [],
           crashHistory: [],
+          credits: STARTING_CREDITS,
           activeChallengeId: null,
           replay: null,
         }),
@@ -274,6 +302,7 @@ export const useGame = create<GameState>()(
         builds: st.builds,
         activeBuildId: st.activeBuildId,
         settings: st.settings,
+        credits: st.credits,
         unlockedParts: st.unlockedParts,
         challengeProgress: st.challengeProgress,
         crashHistory: st.crashHistory,

@@ -42,6 +42,8 @@ export function BuilderScreen() {
   const renameBuild = useGame((s) => s.renameBuild);
   const setScreen = useGame((s) => s.setScreen);
   const isPartUnlocked = useGame((s) => s.isPartUnlocked);
+  const credits = useGame((s) => s.credits);
+  const buyPart = useGame((s) => s.buyPart);
   const activeChallengeId = useGame((s) => s.activeChallengeId);
   const exitChallenge = useGame((s) => s.exitChallenge);
   const sandbox = useGame((s) => s.settings.sandbox);
@@ -168,6 +170,14 @@ export function BuilderScreen() {
         <LiveStat label="P/W" value={fmt(stats.powerToWeight)} unit="hp/t" />
       </div>
 
+      {!sandbox && (
+        <div className="builder-wallet">
+          <span className="builder-wallet-label">CREDITS</span>
+          <span className="builder-wallet-amt mono">◈ {fmt(credits)}</span>
+          <span className="builder-wallet-hint">crash to earn · tap locked parts to buy</span>
+        </div>
+      )}
+
       {/* Category tabs */}
       <div className="builder-tabs chip-row">
         {sandbox && (
@@ -215,7 +225,18 @@ export function BuilderScreen() {
           const good = metric.better === 'up' ? delta > 0 : delta < 0;
           const wouldOverBudget = !sandbox && !build.sandbox && !selected && hyp.totalCost > BUILD_BUDGET;
           const locked = !sandbox && !selected && !isPartUnlocked(p.id);
+          const affordable = credits >= p.cost;
           const unlockSrc = PART_UNLOCK_SOURCE.get(p.id);
+
+          const choose = () =>
+            isMulti
+              ? toggleMultiPart(build.id, partCat as 'safety' | 'aero', p.id)
+              : selectPart(build.id, partCat, p.id);
+          const onClickPart = () => {
+            if (locked) {
+              if (affordable && buyPart(p.id)) choose(); // unlock then equip
+            } else choose();
+          };
 
           return (
             <button
@@ -223,12 +244,9 @@ export function BuilderScreen() {
               className="part-card"
               data-selected={selected}
               data-locked={locked}
-              disabled={locked}
-              onClick={() =>
-                isMulti
-                  ? toggleMultiPart(build.id, partCat as 'safety' | 'aero', p.id)
-                  : selectPart(build.id, partCat, p.id)
-              }
+              data-buyable={locked && affordable}
+              disabled={locked && !affordable}
+              onClick={onClickPart}
             >
               <div className="part-main">
                 <div className="part-top">
@@ -248,7 +266,10 @@ export function BuilderScreen() {
               </div>
               <div className="part-delta">
                 {locked ? (
-                  <span className="part-unlock-hint">{unlockSrc ? `Win “${unlockSrc.name}”` : 'Locked'}</span>
+                  <>
+                    <span className="part-buy" data-afford={affordable}>◈ {fmt(p.cost)}</span>
+                    <span className="part-buy-action">{affordable ? 'Tap to buy' : (unlockSrc ? `Win “${unlockSrc.name}”` : 'Locked')}</span>
+                  </>
                 ) : (
                   <>
                     <span className="part-delta-label">{metric.label}</span>
