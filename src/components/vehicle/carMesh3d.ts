@@ -10,13 +10,24 @@ import { SILHOUETTES, type SilhouetteStyle } from './silhouetteProfiles';
  * centre (matching the physics box), so it can be positioned directly from the
  * baked transform.
  */
+/** Per-zone damage 0..100 used to crumple the body mesh. */
+export interface BodyDamage {
+  front: number; rear: number; left: number; right: number; roof: number;
+}
+
+/** Deterministic per-index jitter in [-0.5, 0.5] for a crumpled, non-smooth look. */
+function jitter(i: number): number {
+  const x = Math.sin(i * 12.9898) * 43758.5453;
+  return (x - Math.floor(x)) - 0.5;
+}
+
 export function buildCarMesh(
   style: SilhouetteStyle,
   L: number,
   bodyH: number,
   W: number,
   paintColor: string,
-): { group: THREE.Group; body: THREE.Mesh } {
+): { group: THREE.Group; body: THREE.Mesh; deform: (damage: BodyDamage, t: number) => void } {
   const sil = SILHOUETTES[style];
   const group = new THREE.Group();
 
@@ -56,6 +67,33 @@ export function buildCarMesh(
   const body = new THREE.Mesh(bodyGeo, paint);
   group.add(body);
 
+  // Snapshot undeformed vertex positions for the crush function.
+  const origPos = new Float32Array((bodyGeo.attributes.position.array as ArrayLike<number>));
+  const hx = L / 2, hz = W / 2;
+
+  /** Crumple the body toward the damaged zones. `t` ramps 0→1 through impact. */
+  const deform = (dmg: BodyDamage, t: number) => {
+    const attr = bodyGeo.attributes.position;
+    const arr = attr.array as Float32Array;
+    const fr = dmg.front / 100, re = dmg.rear / 100, le = dmg.left / 100, ri = dmg.right / 100, ro = dmg.roof / 100;
+    const anyDmg = Math.max(fr, re, le, ri, ro);
+    for (let i = 0; i < attr.count; i++) {
+      let x = origPos[i * 3], y = origPos[i * 3 + 1], z = origPos[i * 3 + 2];
+      const j = jitter(i);
+      if (x > 0 && fr > 0) { x -= (x / hx) * fr * L * 0.3 * t; y += j * 0.08 * fr * t; }
+      if (x < 0 && re > 0) { x += (-x / hx) * re * L * 0.22 * t; }
+      if (z > hz * 0.3 && le > 0) { z -= (z / hz) * le * W * 0.32 * t; }
+      if (z < -hz * 0.3 && ri > 0) { z += (-z / hz) * ri * W * 0.32 * t; }
+      if (y > bodyH * 0.3 && ro > 0) { y -= (y / bodyH) * ro * bodyH * 0.45 * t; }
+      // overall crumpled jitter
+      x += j * 0.03 * anyDmg * t;
+      z += jitter(i + 7) * 0.02 * anyDmg * t;
+      arr[i * 3] = x; arr[i * 3 + 1] = y; arr[i * 3 + 2] = z;
+    }
+    attr.needsUpdate = true;
+    bodyGeo.computeVertexNormals();
+  };
+
   // ---- Glass greenhouse (slightly proud of the body sides) ----
   const glassShape = new THREE.Shape();
   sil.glass.forEach((p, i) => {
@@ -91,7 +129,7 @@ export function buildCarMesh(
   belt2.position.z = -W - 0.01;
   group.add(belt2);
 
-  return { group, body };
+  return { group, body, deform };
 }
 
 /** Add four wheels to a car group at the given local offsets. */

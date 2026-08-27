@@ -15,18 +15,30 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 9
+## Current status: END OF SESSION 10
 
 The core game loop is **playable end to end** with real-time 3D physics + sound,
 a challenge campaign + daily challenge, progression, a sandbox mode, shareable
-builds + replays, a shaped 3D vehicle, environmental/random events, and a
-settings screen:
+builds + replays, a shaped 3D vehicle that **crumples per the damage map**,
+environmental/random events, and a settings screen:
 
 **BUILD** (Garage + Builder) → **TEST** (scenario + params) → **CRASH**
 (3D Rapier sim, sound + cinematic + replay) → **ANALYZE** (engineering report) →
 **MODIFY** → **RUN AGAIN**, plus a **Goals** campaign that gates part unlocks,
 a **Sandbox** mode for absurd experiments, and **shareable build links + saved
 crash replays**.
+
+### New in Session 10 — damage-state mesh deformation (Phase 7 visual)
+- **`buildCarMesh` now returns a `deform(damage, t)` closure** that crumples the
+  body's vertices toward the damaged zones (front cave-in, rear/side push-in,
+  roof crush) with deterministic jitter for a crumpled-metal look. It rebuilds
+  from a snapshot of the undeformed positions each call, so it is **fully
+  reversible** — scrubbing back through impact un-crushes the car.
+- `CrashSim3D` drives it from `result.damage`, ramped as the cursor passes
+  `impactFrame`, replacing the old uniform scale-crush.
+- Verified in headless WebGL: a high-speed wall crash shows a caved-in,
+  jagged front end + debris; scrubbing to t=0 restores a pristine body. No
+  page errors.
 
 ### New in Session 9 — daily challenge & settings (Phase 28 + polish)
 - **Daily challenge** (`getDailyChallenge` in `challenges.ts`): a rotating
@@ -239,7 +251,7 @@ later refinement.
 | 4 | Vehicle visualization | ✅ 2.5D thumbnails + shaped 3D body (extruded silhouette); damage-state morphing later |
 | 5 | Physics system (Rapier3D) | ✅ done — deterministic pre-sim |
 | 6 | Basic crash test | ✅ done (3D real-time, all 11 scenarios) |
-| 7 | Damage system | 🟨 model done; 3D crush is basic (scale); no debris |
+| 7 | Damage system | ✅ model + per-zone 3D mesh crumple (reversible) + debris |
 | 8 | Cinematic replay + slow-mo scrubber | ✅ done (camera modes, slow-mo, scrubber, replay) |
 | 9 | Crash analysis | ✅ done (report) |
 | 10 | Challenges | ✅ done (8 challenges, 3 tiers, ★ ratings) |
@@ -255,30 +267,29 @@ later refinement.
 
 ---
 
-## Recommended next task (Session 10)
+## Recommended next task (Session 11)
 
-The brief is essentially fully implemented. Remaining polish, pick one:
+The brief is essentially fully implemented and polished. Remaining, pick one:
 
-- **Balance + peak-G reconciliation** — thread the sim's measured `peakAccelG`
-  back through `onComplete` → report so the number matches the physics watched
-  (touches CrashSim3D/TestScreen/ReplayHost/CrashReport); difficulty-test the
-  tier-2/3 challenges with real builds.
 - **Debug/dev tools (Phase 30)** — a hidden dev overlay (gravity, time scale,
   force-crash, show CoG/velocity vectors, hitboxes) gated behind a secret tap;
   never exposed to normal users.
-- **Damage-state visuals** — morph/deform the 3D body mesh by the per-zone
-  damage map (front crumple, roof crush) instead of a uniform scale; add broken
-  glass / detached bumper bits.
-- **Leaderboards (Phase 21)** — needs a backend; out of scope until one exists.
-  Could stub a local "personal bests" board from `crashHistory` in the meantime.
-- **A README/landing polish + a session-start hook** so web sessions run
-  `npm ci && npm run build` checks automatically.
+- **Local "personal bests" board** — a leaderboard-style screen derived from
+  `crashHistory` (safest, fastest, cheapest, biggest impact) since real
+  server-side leaderboards (Phase 21) need a backend that doesn't exist.
+- **Balance + peak-G reconciliation** — thread the sim's measured `peakAccelG`
+  back through `onComplete` → report so the number matches the physics watched;
+  difficulty-test the tier-2/3 challenges with real builds.
+- **Session-start hook + README/landing polish** so web sessions auto-run
+  `npm ci` + build/typecheck checks (see the `session-start-hook` skill).
+- **More crumple polish** — detach a bumper/wheel mesh on severe front damage;
+  crack/darken the glass greenhouse on roof/front crush.
 
 Before starting: `npm install`, `npm run dev`, open at 393×852. Smoke paths:
-(career) Goals → attempt → Build → Run → COMPLETE; (daily) Goals → Today's Test;
-(settings) Garage → gear → toggles; (sandbox) Garage → Sandbox → Tuning → Crash;
-(events) Crash → Simulation Events → Crash; (share) 🔗 → Copy Link; (replay)
-Recent Crashes → tap. WebGL + a user gesture (audio) required.
+(career) Goals → attempt → Build → Run → COMPLETE (watch it crumple!); (daily)
+Goals → Today's Test; (settings) Garage → gear; (sandbox) Garage → Sandbox →
+Tuning → Crash; (events) Crash → Simulation Events; (share) 🔗 → Copy Link;
+(replay) Recent Crashes → tap. WebGL + a user gesture (audio) required.
 
 ## Session log
 - **Session 1**: Scaffolded project; built app shell, parts DB, stat engine,
@@ -326,3 +337,8 @@ Recent Crashes → tap. WebGL + a user gesture (audio) required.
   on Goals, resolved through `getChallenge`) and a **Settings sheet** (gear in
   the Garage) for Sound / Reduce Motion / Sandbox / Reset Progress — finally
   wiring `settings.reduceMotion` (CSS class + 3D shake gate).
+- **Session 10**: Added **damage-state mesh deformation** — `buildCarMesh`
+  returns a reversible `deform(damage, t)` that crumples the body's vertices
+  toward the damaged zones (front/rear/side/roof) with crumpled-metal jitter,
+  driven from `result.damage` as the scrub cursor passes impact. The 3D car now
+  visibly wrecks and un-wrecks with the timeline.

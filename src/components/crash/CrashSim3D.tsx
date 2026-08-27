@@ -142,11 +142,13 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
       const bodyGroups: THREE.Group[] = [];
       const bodyMain: (THREE.Mesh | null)[] = [];
       const chassisStyle = CHASSIS_STYLE[build.parts.chassis ?? 'chassis.sedan'] ?? 'sedan';
+      let chassisDeform: ((d: typeof result.damage, t: number) => void) | null = null;
       rec.bodies.forEach((b) => {
         const [L, H, W] = b.size;
         if (b.kind === 'chassis') {
-          const { group: g, body } = buildCarMesh(chassisStyle, L, H, W, build.color);
+          const { group: g, body, deform } = buildCarMesh(chassisStyle, L, H, W, build.color);
           addWheelMeshes(g, rec.wheelLocal, rec.wheelRadius);
+          chassisDeform = deform;
           bodyMain.push(body);
           scene.add(g);
           bodyGroups.push(g);
@@ -283,12 +285,10 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
           g.quaternion.set(r.transforms[base + 3], r.transforms[base + 4], r.transforms[base + 5], r.transforms[base + 6]);
         }
 
-        // visual crush on the chassis after impact
-        if (!r.clean && setup.bodyMain[0]) {
-          const past = Math.max(0, Math.min(1, (cursorRef.current - r.impactFrame) / 20));
-          const crush = 1 - (result.deformationPct / 100) * 0.28 * past;
-          setup.bodyMain[0].scale.x = crush;
-          setup.bodyMain[0].position.x = ((1 - crush) * r.bodies[0].size[0]) / 2; // keep rear fixed
+        // Crumple the chassis body toward its damaged zones as impact passes.
+        if (!r.clean && chassisDeform) {
+          const past = Math.max(0, Math.min(1, (cursorRef.current - r.impactFrame) / 16));
+          chassisDeform(result.damage, past);
         }
 
         // Speed & screech from frame delta of the target.
