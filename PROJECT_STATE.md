@@ -98,16 +98,40 @@ The core game loop is **playable end to end** using an *analytical* crash model
 
 ## Recommended next task (Session 2)
 
-**Phase 5 + 8: Real-time deterministic physics with Rapier2D and a scrubbable
-replay.** Replace the CSS `CrashStage` with a 2D physics sim (chassis body +
-wheels + barrier), fixed-timestep and seeded so a build+scenario always
-reproduces the same crash. Drive the *visual* deformation and camera from the
-sim while keeping `crashModel.ts` as the authoritative scored outcome (or
-reconcile the two). Add slow-motion (1× / 0.5× / 0.25× / 0.1×) and a timeline
-scrubber. This is the single biggest jump in "oh my god, run it again" feel.
+**Phase 5 + 8: Real-time deterministic 3D physics + cinematic replay.**
+
+> **Decision (user, session 1):** the crash view is **3D** — Three.js +
+> Rapier**3D** (`@dimforge/rapier3d-compat`), not the 2D fallback. Accept the
+> heavier lift; protect the 60fps target hard (see guardrails).
+
+Replace the CSS `CrashStage` with a real 3D sim:
+- Build a low-poly vehicle from the same `VehicleStats` (box/compound chassis,
+  4 wheels via raycast-vehicle or revolute+suspension, barrier/other cars per
+  scenario `kind`). Reuse chassis `platform` dims + `silhouetteProfiles` intent
+  for proportions; the SVG silhouette stays for garage/builder/lab thumbnails.
+- **Fixed timestep** (e.g. 1/120 s) with an accumulator; **seeded** RNG so a
+  build+scenario always reproduces the same crash (deterministic replays).
+- Keep `crashModel.ts` as the authoritative *scored* outcome, OR reconcile: let
+  the sim measure peak decel / intrusion from contact impulses and feed the
+  report. Don't ship two disagreeing truths.
+- Record per-step transforms into a ring buffer → **scrubbable timeline** +
+  **slow-motion** (1× / 0.5× / 0.25× / 0.1× / 0.05×) + camera modes
+  (chase/front/side/top/impact).
+
+**Performance guardrails (3D on mobile — non-negotiable):**
+- Lazy-load Three + Rapier3D as an async chunk; the app shell must not pay for
+  them until the user hits Crash. Keep the main bundle lean.
+- Low-poly meshes, no shadows-by-default (or a single cheap contact shadow),
+  capped DPR (≤2), instanced/merged geometry, dispose everything on unmount.
+- Run physics in a **Web Worker** if the main thread can't hold 60fps; transfer
+  transforms via a shared/typed array.
+- Budget: target 60fps on a mid iPhone; measure. If a scenario can't hold frame
+  rate, cap simulated bodies (e.g. multi-car) rather than dropping the feature.
 
 Before starting: `npm install`, `npm run dev`, open at 393×852, click through
-Garage → Build → Crash → report to confirm nothing regressed.
+Garage → Build → Crash → report to confirm nothing regressed. Add
+`three` + `@dimforge/rapier3d-compat` (note: the 2D `rapier2d-compat` dep can be
+dropped once 3D is in).
 
 ## Session log
 - **Session 1**: Scaffolded project; built app shell, parts DB, stat engine,
