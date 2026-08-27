@@ -7,6 +7,7 @@ import { TestScreen } from './app/screens/TestScreen';
 import { LabScreen } from './app/screens/LabScreen';
 import { ChallengesScreen } from './app/screens/ChallengesScreen';
 import { ReplayHost } from './components/crash/ReplayHost';
+import { VehicleShowcase } from './components/vehicle/VehicleShowcase';
 import type { VehicleBuild } from './game/parts/types';
 import { readSharedBuildFromUrl, clearSharedBuildFromUrl } from './game/vehicle/shareCodec';
 import './app/app.css';
@@ -15,6 +16,7 @@ export function App() {
   const screen = useGame((s) => s.screen);
   const importBuild = useGame((s) => s.importBuild);
   const reduceMotion = useGame((s) => s.settings.reduceMotion);
+  const showcaseOpen = useGame((s) => s.showcaseOpen);
   const [shared, setShared] = useState<VehicleBuild | null>(null);
 
   // On first load, offer to import a build shared via URL hash.
@@ -35,6 +37,7 @@ export function App() {
       </main>
       <BottomNav />
       <ReplayHost />
+      {showcaseOpen && <VehicleShowcase />}
 
       {shared && (
         <div className="import-backdrop" onClick={() => setShared(null)}>

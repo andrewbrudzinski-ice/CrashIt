@@ -15,7 +15,25 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 14
+## Current status: END OF SESSION 15
+
+**Session 15 — vehicle system rebuilt from the ground up (in progress).** The
+old blob was replaced with an archetype-driven procedural car system
+(`carMesh3d.ts`): a plan-tapered, crowned **lofted body** (pinches at nose/tail
+like a real car), **8 archetypes** with genuinely different silhouettes
+(sports/sedan/muscle/suv/pickup/hatch/van/super), a solid painted body with
+**inset dark glass windows** (windshield / side windows / backlight) rather than
+a transparent bubble, **detailed low-profile multi-spoke wheels**, fitted flared
+arches, LED head/DRL/tail lighting, body-colour bumpers + grille styles,
+mirrors, door shut-lines & handles, exhausts, and per-archetype spoilers. Zone
+deformation preserved. Added **real shadow-mapped lighting** to the crash
+renderer (the car is grounded now). Added a **Vehicle Lab** showcase
+(Settings → Vehicle Lab): orbit + 5 camera presets, cycle archetype / paint /
+finish / wheels / damage. **Known rough edges to keep polishing:** glass panel
+fit vs. the tumblehome, front-fascia layering, faint floating door-lines, and
+overall surface polish — use the Vehicle Lab to evaluate and steer.
+
+## Previous status: END OF SESSION 14
 
 The core game loop is **playable end to end** with real-time 3D physics + sound,
 a challenge campaign + daily challenge, a **credits economy (crash for cash → buy

@@ -60,6 +60,8 @@ interface GameState {
   crashHistory: CrashRecord[];
   /** A crash currently being replayed as a full-screen overlay. */
   replay: CrashRecord | null;
+  /** Dev-only vehicle showcase overlay (not persisted). */
+  showcaseOpen: boolean;
 
   // --- navigation ---
   setScreen: (s: Screen) => void;
@@ -80,6 +82,7 @@ interface GameState {
   recordCrash: (build: VehicleBuild, config: ScenarioConfig, result: CrashResult, payout: number) => void;
   startReplay: (record: CrashRecord) => void;
   endReplay: () => void;
+  setShowcaseOpen: (v: boolean) => void;
   deleteCrash: (id: string) => void;
   importBuild: (build: VehicleBuild, open?: boolean) => string;
 
@@ -123,8 +126,10 @@ export const useGame = create<GameState>()(
       activeChallengeId: null,
       crashHistory: [],
       replay: null,
+      showcaseOpen: false,
 
       setScreen: (s) => set({ screen: s }),
+      setShowcaseOpen: (v) => set({ showcaseOpen: v }),
       openBuilder: (buildId) => set({ activeBuildId: buildId, screen: 'builder' }),
 
       startChallenge: (challengeId, buildId) =>

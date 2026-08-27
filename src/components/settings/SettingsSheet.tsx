@@ -21,6 +21,7 @@ export function SettingsSheet({ onClose }: Props) {
   const setSandbox = useGame((s) => s.setSandbox);
   const setReduceMotion = useGame((s) => s.setReduceMotion);
   const resetProgress = useGame((s) => s.resetProgress);
+  const setShowcaseOpen = useGame((s) => s.setShowcaseOpen);
   const challengeCount = useGame((s) => Object.keys(s.challengeProgress).length);
   const crashCount = useGame((s) => s.crashHistory.length);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -53,6 +54,16 @@ export function SettingsSheet({ onClose }: Props) {
             <span className="settings-desc">No budget or unlocks; tuning sliders.</span>
           </div>
           <Toggle on={settings.sandbox} onChange={setSandbox} />
+        </div>
+
+        <div className="settings-divider" />
+
+        <div className="settings-row">
+          <div className="settings-row-text">
+            <span className="settings-label">Vehicle Lab</span>
+            <span className="settings-desc">Preview every car model, paint, wheel & damage.</span>
+          </div>
+          <button className="btn btn-ghost" onClick={() => { setShowcaseOpen(true); onClose(); }}>Open</button>
         </div>
 
         <div className="settings-divider" />

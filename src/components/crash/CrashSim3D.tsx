@@ -93,6 +93,8 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
       renderer.setSize(mount.clientWidth, mount.clientHeight);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 0.92;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       mount.appendChild(renderer.domElement);
 
       // ---- Image-based lighting: a soft studio env so metallic paint, chrome
@@ -103,10 +105,19 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
       cleanupFns.push(() => { envRT.dispose(); pmrem.dispose(); });
 
       // ---- Lights ----
-      scene.add(new THREE.HemisphereLight(0xcfe6ff, 0x0a0d12, 1.1));
-      const key = new THREE.DirectionalLight(0xffffff, 1.4);
+      scene.add(new THREE.HemisphereLight(0xcfe6ff, 0x0a0d12, 0.9));
+      const key = new THREE.DirectionalLight(0xffffff, 1.5);
       key.position.set(-6, 14, 8);
+      key.castShadow = true;
+      key.shadow.mapSize.set(2048, 2048);
+      key.shadow.camera.near = 1;
+      key.shadow.camera.far = 60;
+      key.shadow.camera.left = -16; key.shadow.camera.right = 16;
+      key.shadow.camera.top = 16; key.shadow.camera.bottom = -16;
+      key.shadow.bias = -0.0004;
+      key.shadow.normalBias = 0.03;
       scene.add(key);
+      scene.add(key.target); // moved each frame so the shadow frustum tracks the car
       const rim = new THREE.DirectionalLight(0x37e0d8, 0.5);
       rim.position.set(10, 4, -8);
       scene.add(rim);
@@ -120,6 +131,7 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
       );
       ground.rotation.x = -Math.PI / 2;
       ground.position.y = 0;
+      ground.receiveShadow = true;
       scene.add(ground);
       const grid = new THREE.GridHelper(gW, gW / 2, 0x2b3542, 0x1a212b);
       (grid.material as THREE.Material).transparent = true;
@@ -136,6 +148,8 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
         });
         const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.size[0], p.size[1], p.size[2]), mat);
         mesh.position.set(p.pos[0], p.pos[1], p.pos[2]);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
         if (p.rot) mesh.quaternion.set(p.rot[0], p.rot[1], p.rot[2], p.rot[3]);
         if (p.kind === 'barrier') {
           // hazard stripes via emissive edge
@@ -166,6 +180,7 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
             aero,
           });
           chassisDeform = deform;
+          g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
           scene.add(g);
           bodyGroups.push(g);
         } else {
@@ -175,6 +190,7 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
             [-L * 0.32, -H * 0.5 + 0.12, W * 0.5], [-L * 0.32, -H * 0.5 + 0.12, -W * 0.5],
           ];
           const { group: g } = buildCarMesh('sedan', L, H, W, b.color ?? '#c0392b', 0.3, oppWheels);
+          g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
           scene.add(g);
           bodyGroups.push(g);
         }
@@ -434,6 +450,9 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
 
         // camera
         readPos(r, f, setup.targetIdx, tmpTarget);
+        // Keep the shadow frustum tight on the car as it travels.
+        key.target.position.copy(tmpTarget);
+        key.position.set(tmpTarget.x - 6, tmpTarget.y + 14, tmpTarget.z + 8);
         const mode = camRef.current;
         if (mode === 'impact') {
           desiredCam.copy(CAM_OFFSET.impact).multiplyScalar(camScale).add(setup.impactPos);

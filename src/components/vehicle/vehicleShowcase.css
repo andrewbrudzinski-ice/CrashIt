@@ -1,0 +1,58 @@
+.vs-root {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #0c1118;
+  display: flex;
+  flex-direction: column;
+  overscroll-behavior: contain;
+}
+.vs-stage { position: absolute; inset: 0; touch-action: none; }
+.vs-stage canvas { display: block; width: 100%; height: 100%; }
+
+.vs-top {
+  position: relative;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: calc(env(safe-area-inset-top) + 10px) 16px 10px;
+  pointer-events: none;
+}
+.vs-title { font-weight: 700; letter-spacing: 0.04em; color: #e7edf3; text-shadow: 0 1px 6px #000; }
+.vs-close {
+  pointer-events: auto;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(20,26,34,0.8); color: #e7edf3; border: 1px solid #2b3542;
+  font-size: 16px;
+}
+
+.vs-views {
+  position: relative;
+  display: flex; gap: 6px; padding: 0 12px; flex-wrap: wrap;
+  pointer-events: auto;
+}
+
+.vs-panel {
+  position: relative;
+  margin-top: auto;
+  background: linear-gradient(180deg, rgba(12,17,24,0) 0%, rgba(12,17,24,0.9) 22%, #0c1118 40%);
+  padding: 24px 14px calc(env(safe-area-inset-bottom) + 14px);
+  display: flex; flex-direction: column; gap: 12px;
+  pointer-events: auto;
+}
+.vs-group { display: flex; flex-direction: column; gap: 6px; }
+.vs-lab { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #8b97a5; }
+.vs-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.vs-chip {
+  padding: 7px 11px; border-radius: 999px;
+  background: rgba(30,38,48,0.85); color: #cbd4de; border: 1px solid #2b3542;
+  font-size: 12px; text-transform: capitalize; white-space: nowrap;
+}
+.vs-chip[data-active='true'] { background: #2ee6c6; color: #05201c; border-color: #2ee6c6; font-weight: 700; }
+
+.vs-sw {
+  width: 30px; height: 30px; border-radius: 8px; border: 2px solid #2b3542; padding: 0;
+}
+.vs-sw[data-active='true'] { border-color: #2ee6c6; box-shadow: 0 0 0 2px rgba(46,230,198,0.3); }
+
+.vs-slider { width: 100%; accent-color: #2ee6c6; }
+.vs-hint { font-size: 11px; color: #6f7a88; text-align: center; }
