@@ -1,0 +1,134 @@
+.garage-brand {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--c-text);
+}
+
+.garage-new {
+  margin-bottom: 18px;
+}
+
+.garage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.garage-card {
+  overflow: hidden;
+  transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast);
+  cursor: pointer;
+}
+.garage-card:active {
+  transform: scale(0.99);
+  border-color: var(--c-surface-4);
+}
+
+.garage-thumb {
+  position: relative;
+  padding: 10px 14px 0;
+  background:
+    radial-gradient(120% 120% at 50% 0%, rgba(55, 224, 216, 0.05), transparent 60%),
+    var(--c-surface-2);
+  border-bottom: 1px solid var(--c-line);
+}
+
+.garage-code {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-cyan);
+  background: rgba(6, 8, 11, 0.6);
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--c-line);
+}
+
+.garage-meta {
+  padding: 12px 14px 14px;
+}
+
+.garage-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.garage-name {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.garage-cost {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.garage-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.mini-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mini-stat-label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--c-text-faint);
+  font-weight: 700;
+}
+
+.mini-stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.mini-stat-unit {
+  font-size: 10px;
+  color: var(--c-text-faint);
+  margin-left: 2px;
+  font-weight: 600;
+}
+
+.garage-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.garage-action {
+  flex: 1;
+  height: 38px;
+  border-radius: var(--r-sm);
+  background: var(--c-surface-3);
+  border: 1px solid var(--c-line);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--c-text-dim);
+  transition: transform var(--dur-fast);
+}
+.garage-action:active { transform: scale(0.96); }
+.garage-action.primary {
+  background: var(--c-surface-4);
+  color: var(--c-text);
+  flex: 1.2;
+}
+.garage-action.danger { color: var(--c-red); }
+
+.garage-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--c-text-dim);
+}
+.garage-empty .dim { color: var(--c-text-faint); font-size: 13px; margin-top: 4px; }

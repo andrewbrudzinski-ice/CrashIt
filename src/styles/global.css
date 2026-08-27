@@ -1,0 +1,123 @@
+@import './theme.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+html {
+  /* Prevent iOS text auto-zoom weirdness; lock the base scale. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-ui);
+  background: var(--c-void);
+  color: var(--c-text);
+  line-height: 1.4;
+  font-size: 15px;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Disable pull-to-refresh & rubber-banding for a native app feel. */
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+#root {
+  display: flex;
+  justify-content: center;
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(55, 224, 216, 0.06), transparent 60%),
+    radial-gradient(140% 80% at 50% 120%, rgba(255, 107, 26, 0.06), transparent 55%),
+    var(--c-void);
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 16px; /* >=16px avoids iOS zoom-on-focus */
+  color: inherit;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Screen-reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Custom scrollbars for the technical look (WebKit) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--c-surface-4);
+  border-radius: var(--r-pill);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* A subtle blueprint grid used as a section backdrop */
+.blueprint-grid {
+  background-image:
+    linear-gradient(var(--c-line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--c-line-soft) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

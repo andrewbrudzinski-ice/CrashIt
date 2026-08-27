@@ -1,0 +1,173 @@
+.lab-body { display: flex; flex-direction: column; gap: 14px; }
+
+.lab-preview { padding: 8px; }
+
+.lab-panel { padding: 14px; }
+.lab-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.lab-panel-title { font-size: 14px; font-weight: 700; }
+.lab-panel-hint { font-size: 12px; color: var(--c-cyan); font-weight: 700; }
+
+.lab-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--c-text-dim);
+  line-height: 1.4;
+}
+
+/* Weight distribution */
+.wd-bar {
+  display: flex;
+  height: 42px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  border: 1px solid var(--c-line);
+}
+.wd-front, .wd-rear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  transition: width var(--dur-med) var(--ease-out);
+}
+.wd-front { background: linear-gradient(180deg, var(--c-hazard-soft), var(--c-hazard)); color: #1a0d04; }
+.wd-rear { background: var(--c-surface-3); color: var(--c-text); }
+.wd-legend {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--c-text-faint);
+  font-weight: 700;
+}
+
+/* Gauge */
+.gauge-head, .statbar-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.statbar-label { font-size: 12px; color: var(--c-text-dim); font-weight: 600; }
+.statbar-val { font-size: 13px; font-weight: 700; color: var(--c-text); }
+.gauge-track {
+  position: relative;
+  display: flex;
+  height: 12px;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+.gauge-zone { height: 100%; opacity: 0.55; }
+.gauge-needle {
+  position: absolute;
+  top: -3px;
+  width: 3px;
+  height: 18px;
+  background: var(--c-text);
+  border-radius: 2px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+  transition: left var(--dur-med) var(--ease-out);
+}
+
+/* Stat bars */
+.statbar { margin-bottom: 12px; }
+.statbar:last-child { margin-bottom: 0; }
+.statbar-track {
+  height: 8px;
+  background: var(--c-surface-3);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+.statbar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--c-cyan-dim), var(--c-cyan));
+  border-radius: var(--r-pill);
+  transition: width var(--dur-med) var(--ease-out);
+}
+
+/* Metric grid */
+.lab-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.lab-metric {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lab-metric-label { font-size: 8.5px; letter-spacing: 0.08em; color: var(--c-text-faint); font-weight: 700; }
+.lab-metric-value { font-size: 18px; font-weight: 700; color: var(--c-text); }
+.lab-metric-unit { font-size: 10px; color: var(--c-text-faint); margin-left: 2px; }
+
+/* Power curve */
+.powercurve-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--c-text-dim);
+}
+.powercurve-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.powercurve-legend i { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
+
+/* Braking */
+.braking-track {
+  position: relative;
+  height: 40px;
+  background: repeating-linear-gradient(90deg, var(--c-surface-2) 0 18px, var(--c-surface-3) 18px 20px);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--c-line);
+  overflow: hidden;
+}
+.braking-car {
+  position: absolute;
+  top: 8px;
+  font-size: 22px;
+  transition: left var(--dur-slow) var(--ease-out);
+}
+.braking-wall {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: repeating-linear-gradient(45deg, var(--c-red) 0 6px, #7a1520 6px 12px);
+}
+.braking-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  font-size: 10px;
+  color: var(--c-text-faint);
+}
+
+/* Config list */
+.lab-config { display: flex; flex-direction: column; }
+.config-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--c-line-soft);
+  font-size: 13px;
+}
+.config-row:last-child { border-bottom: none; }
+.config-cat { color: var(--c-text-faint); text-transform: uppercase; font-size: 10px; letter-spacing: 0.08em; font-weight: 700; align-self: center; }
+.config-part { color: var(--c-text); font-weight: 600; }
+
+.lab-empty {
+  height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--c-text-dim);
+}

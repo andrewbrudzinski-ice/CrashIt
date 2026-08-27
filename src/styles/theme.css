@@ -1,0 +1,72 @@
+/*
+ * CRASHIT — Design tokens
+ * Aesthetic: automotive engineering laboratory + crash-test facility.
+ * Dark, technical, precise. Steel + carbon surfaces, hazard-orange accents,
+ * instrument cyan for data. Monospace for readouts, humanist sans for UI.
+ */
+:root {
+  /* ---- Surfaces (near-black carbon → steel) ---- */
+  --c-void: #06080b;
+  --c-bg: #0a0d12;
+  --c-surface-1: #10141b;
+  --c-surface-2: #161c26;
+  --c-surface-3: #1e2632;
+  --c-surface-4: #28323f;
+  --c-line: #2b3542;
+  --c-line-soft: #1c232d;
+
+  /* ---- Text ---- */
+  --c-text: #e8edf4;
+  --c-text-dim: #9aa7b6;
+  --c-text-faint: #5f6d7e;
+
+  /* ---- Brand / accents ---- */
+  --c-hazard: #ff6b1a;          /* primary action / crash / warning */
+  --c-hazard-soft: #ff8c4d;
+  --c-cyan: #37e0d8;            /* instrument data / measurements */
+  --c-cyan-dim: #1f8f8a;
+  --c-lime: #b6ff3a;           /* pass / go / positive delta */
+  --c-red: #ff3b4e;            /* fail / danger / negative */
+  --c-amber: #ffcc33;          /* caution / mid rating */
+  --c-violet: #9b7bff;         /* electric / special */
+  --c-blue: #4a9eff;
+
+  /* ---- Rating scale (safety scores etc.) ---- */
+  --rate-bad: var(--c-red);
+  --rate-poor: #ff7a3c;
+  --rate-mid: var(--c-amber);
+  --rate-good: #8fd94a;
+  --rate-great: var(--c-lime);
+
+  /* ---- Typography ---- */
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code',
+    Menlo, Consolas, monospace;
+
+  /* ---- Elevation ---- */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-3: 0 12px 40px rgba(0, 0, 0, 0.55);
+  --glow-hazard: 0 0 0 1px rgba(255, 107, 26, 0.4), 0 0 24px rgba(255, 107, 26, 0.25);
+  --glow-cyan: 0 0 0 1px rgba(55, 224, 216, 0.35), 0 0 20px rgba(55, 224, 216, 0.18);
+
+  /* ---- Radii ---- */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --r-pill: 999px;
+
+  /* ---- Motion ---- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms;
+  --dur-med: 240ms;
+  --dur-slow: 420ms;
+
+  /* ---- Layout ---- */
+  --nav-h: 64px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --app-max-w: 520px; /* keeps phone-shaped layout on desktop */
+}
