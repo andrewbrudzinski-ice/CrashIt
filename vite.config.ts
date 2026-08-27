@@ -16,6 +16,6 @@ export default defineConfig({
   },
   // Rapier ships a WASM file; ensure it is treated as an asset and not inlined.
   optimizeDeps: {
-    exclude: ['@dimforge/rapier2d-compat'],
+    exclude: ['@dimforge/rapier3d-compat'],
   },
 });

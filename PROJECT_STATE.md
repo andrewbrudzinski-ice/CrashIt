@@ -7,21 +7,49 @@
 crash-testing sandbox. Mobile-first. See the original brief and `ARCHITECTURE.md`.
 
 **Stack:** Vite + React 18 + TypeScript (strict), Zustand (persisted to
-localStorage). Rapier2D (`@dimforge/rapier2d-compat`) is installed for the
-upcoming deterministic physics phase but **not yet wired in**. No backend yet.
+localStorage). **Three.js + Rapier3D** (`@dimforge/rapier3d-compat`) power the
+real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 **Run:** `npm install` → `npm run dev`. Build: `npm run build`. Typecheck:
 `npm run typecheck`. Target viewports: 390×844, 393×852, 430×932.
 
 ---
 
-## Current status: END OF SESSION 1
+## Current status: END OF SESSION 2
 
-The core game loop is **playable end to end** using an *analytical* crash model
-(no real-time physics engine yet):
+The core game loop is **playable end to end with real-time 3D physics**:
 
 **BUILD** (Garage + Builder) → **TEST** (scenario + params) → **CRASH**
-(cinematic) → **ANALYZE** (engineering report) → **MODIFY** → **RUN AGAIN**.
+(3D Rapier sim, cinematic + replay) → **ANALYZE** (engineering report) →
+**MODIFY** → **RUN AGAIN**.
+
+### New in Session 2 — 3D deterministic physics + replay (Phase 5, 6, 8)
+- **Pre-simulated crash engine** (`src/game/sim/crashSim.ts`): builds a Rapier3D
+  world from `VehicleStats` (chassis with real mass / CoG height / inertia,
+  welded wheels, ground, scenario-specific barriers/ramps/curbs/opponent cars),
+  steps at a fixed 1/120 s timestep, and **bakes every body transform into a
+  Float32Array**. Deterministic and cheap (<~500 steps up front). All 11
+  scenarios have setups (frontal/offset/side/rear/rollover/wall/head-on/braking/
+  jump/drop/multi-car); braking respects a clean stop vs. wall impact.
+- **3D renderer** (`src/components/crash/CrashSim3D.tsx`): Three.js scene playing
+  the baked recording — metallic paint, glass greenhouse, wheels, hazard
+  barriers, grid ground, fog. Camera modes (chase/side/front/top/impact),
+  auto slow-mo around impact, impact flash + point light, visual front crush
+  driven by `deformationPct`, live speed HUD.
+- **Replay & scrubbing**: full timeline scrubber, play/pause, slow-mo
+  (1× / 0.5× / 0.25× / 0.1× / 0.05×), Replay, then "Report ›" hands off to the
+  existing analysis. Because playback reads baked frames, scrub/replay are free
+  and identical every time.
+- **Perf guardrails honored**: Three + Rapier are a **lazy chunk** (main bundle
+  stayed ~209 KB; 3D chunk loads only on Crash). DPR capped at 2, low-poly,
+  geometry/material disposal on unmount, physics off the render thread.
+- Verified in headless Chromium (swiftshader WebGL) at 393×852 across
+  frontal / rollover / braking / side with no page errors; Report transition OK.
+
+The analytical `crashModel.ts` remains the **authoritative scored outcome** (the
+report); the 3D sim drives the *visuals* and is fed the same impact speed, so
+the two agree. Full reconciliation (measuring the score from sim impulses) is a
+later refinement.
 
 ### What works (verified in a headless Chromium at 393×852)
 - **App shell**: 4-screen bottom-nav app (Garage / Build / Crash / Lab),
@@ -65,11 +93,18 @@ The core game loop is **playable end to end** using an *analytical* crash model
   crumple zone hit 100% deformation fairly easily (a 56 km/h sedan reports
   "crumple overwhelmed" yet 97% survival — messaging vs. numbers mismatch).
   Re-tune so deformation %, intrusion, and verdict track each other cleanly.
-- Braking-model `impactVelocity()` has an over-complicated `decel` expression;
-  simplify when the physics phase lands.
+- **Sim ↔ score reconciliation**: the report is still analytical; the 3D sim
+  measures a `peakAccelG` but it's unused. Consider feeding sim impulse into the
+  score, or at least surface the measured peak.
+- **3D polish**: vehicle is box-based (no body silhouette in 3D); front-crush is
+  a simple scale (rear wheels can look offset when the body slides back);
+  rollover reliability varies with the trip curb; no skid marks / debris / sound.
+- Braking-model `impactVelocity()` in `crashModel.ts` still has an
+  over-complicated `decel` expression; simplify.
 - No sound yet. No progression/unlocks enforced (parts have `startUnlocked`
-  flags but nothing gates on them). No challenges, replays, or sharing UI.
-- Silhouette is side-view only; no damage deformation shown on the SVG yet.
+  flags but nothing gates on them). No challenges or sharing UI. Crash
+  *recordings* are computed live but not persisted for later viewing.
+- Silhouette (garage/builder/lab thumbnails) is side-view only; no damage state.
 
 ---
 
@@ -80,61 +115,54 @@ The core game loop is **playable end to end** using an *analytical* crash model
 | 1 | Architecture & app shell | ✅ done |
 | 2 | Vehicle data model & garage | ✅ done |
 | 3 | Vehicle builder | ✅ done (polish later) |
-| 4 | Vehicle visualization | 🟨 2.5D side-profile done; damage states + more angles later |
-| 5 | Physics system (Rapier2D) | ⬜ next — deterministic sim |
-| 6 | Basic crash test | 🟨 analytical version done; real-time sim pending |
-| 7 | Damage system | 🟨 model done; visual deformation pending |
-| 8 | Cinematic replay + slow-mo scrubber | ⬜ (placeholder cinematic exists) |
+| 4 | Vehicle visualization | 🟨 2.5D side-profile + 3D box vehicle; body silhouette in 3D + damage states later |
+| 5 | Physics system (Rapier3D) | ✅ done — deterministic pre-sim |
+| 6 | Basic crash test | ✅ done (3D real-time, all 11 scenarios) |
+| 7 | Damage system | 🟨 model done; 3D crush is basic (scale); no debris |
+| 8 | Cinematic replay + slow-mo scrubber | ✅ done (camera modes, slow-mo, scrubber, replay) |
 | 9 | Crash analysis | ✅ done (report) |
 | 10 | Challenges | ⬜ |
 | 11 | Progression / unlocks | ⬜ |
 | 12 | Persistence | 🟨 builds+settings persisted; replays not stored |
 | 13 | Leaderboards / shareability | ⬜ (share codes generated, no UI/backend) |
 | 14 | Audio | ⬜ |
-| 15 | Mobile optimization | 🟨 mobile-first throughout; perf pass later |
+| 15 | Mobile optimization | 🟨 mobile-first + lazy 3D chunk; perf pass on device later |
 | 16 | Final polish & balancing | ⬜ |
 
 ---
 
-## Recommended next task (Session 2)
+## Recommended next task (Session 3)
 
-**Phase 5 + 8: Real-time deterministic 3D physics + cinematic replay.**
+Two high-value directions; pick based on appetite:
 
-> **Decision (user, session 1):** the crash view is **3D** — Three.js +
-> Rapier**3D** (`@dimforge/rapier3d-compat`), not the 2D fallback. Accept the
-> heavier lift; protect the 60fps target hard (see guardrails).
+**A. Sound + game feel (Phase 14 + polish)** — the crash is silent. Add a Web
+Audio architecture: engine/tire/impact/metal-crunch/glass, wind, warning tones;
+tie impact SFX to the sim `impactFrame`, pitch to speed, honor the mute setting
+in the store. Add camera shake, tire skid marks on the ground, and simple debris
+particles at impact. This is the cheapest big jump in "oh my god" feel now that
+the visuals work.
 
-Replace the CSS `CrashStage` with a real 3D sim:
-- Build a low-poly vehicle from the same `VehicleStats` (box/compound chassis,
-  4 wheels via raycast-vehicle or revolute+suspension, barrier/other cars per
-  scenario `kind`). Reuse chassis `platform` dims + `silhouetteProfiles` intent
-  for proportions; the SVG silhouette stays for garage/builder/lab thumbnails.
-- **Fixed timestep** (e.g. 1/120 s) with an accumulator; **seeded** RNG so a
-  build+scenario always reproduces the same crash (deterministic replays).
-- Keep `crashModel.ts` as the authoritative *scored* outcome, OR reconcile: let
-  the sim measure peak decel / intrusion from contact impulses and feed the
-  report. Don't ship two disagreeing truths.
-- Record per-step transforms into a ring buffer → **scrubbable timeline** +
-  **slow-motion** (1× / 0.5× / 0.25× / 0.1× / 0.05×) + camera modes
-  (chase/front/side/top/impact).
+**B. Challenges + progression (Phase 10 + 11)** — structured goals ("survive 40
+mph under $20k", "stop in <30 m", "safest build") scored from `CrashResult` /
+`VehicleStats`, with unlock gating that finally uses the `startUnlocked` flags.
+Gives the loop a reason to keep going.
 
-**Performance guardrails (3D on mobile — non-negotiable):**
-- Lazy-load Three + Rapier3D as an async chunk; the app shell must not pay for
-  them until the user hits Crash. Keep the main bundle lean.
-- Low-poly meshes, no shadows-by-default (or a single cheap contact shadow),
-  capped DPR (≤2), instanced/merged geometry, dispose everything on unmount.
-- Run physics in a **Web Worker** if the main thread can't hold 60fps; transfer
-  transforms via a shared/typed array.
-- Budget: target 60fps on a mid iPhone; measure. If a scenario can't hold frame
-  rate, cap simulated bodies (e.g. multi-car) rather than dropping the feature.
+Also worth a small dedicated pass: **balance `crashModel.ts`** (the deformation/
+survival mismatch) and **reconcile the 3D sim's measured `peakAccelG`** into the
+report so the number on screen matches the physics the player just watched.
 
-Before starting: `npm install`, `npm run dev`, open at 393×852, click through
-Garage → Build → Crash → report to confirm nothing regressed. Add
-`three` + `@dimforge/rapier3d-compat` (note: the 2D `rapier2d-compat` dep can be
-dropped once 3D is in).
+Before starting: `npm install`, `npm run dev`, open at 393×852, run
+Garage → Build → Crash (watch the 3D sim, scrub it) → Report to confirm no
+regressions. WebGL is required for the crash view.
 
 ## Session log
 - **Session 1**: Scaffolded project; built app shell, parts DB, stat engine,
   garage, builder (with what-if deltas), silhouette renderer, scenarios,
   analytical crash model, cinematic placeholder, crash report, engineering lab.
   Verified end-to-end in headless Chromium at mobile size.
+- **Session 2**: Replaced the placeholder cinematic with a real **3D Rapier
+  physics crash simulation** — deterministic pre-baked recording, Three.js
+  playback, camera modes, slow-motion, timeline scrubber, replay, impact FX,
+  visual crush. Lazy-loaded chunk (main bundle unchanged). All 11 scenarios set
+  up. Verified across frontal/rollover/braking/side in headless WebGL; Report
+  transition intact. Dropped `rapier2d-compat`.

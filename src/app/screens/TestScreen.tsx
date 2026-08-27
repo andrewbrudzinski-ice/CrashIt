@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { useGame } from '../../state/store';
 import { deriveStats } from '../../game/vehicle/deriveStats';
 import {
@@ -10,9 +10,11 @@ import {
 } from '../../game/scenarios/scenarios';
 import { computeCrash, type CrashResult } from '../../game/crash/crashModel';
 import { VehicleSilhouette } from '../../components/vehicle/VehicleSilhouette';
-import { CrashStage } from '../../components/crash/CrashStage';
 import { CrashReport } from '../../components/crash/CrashReport';
 import './test.css';
+
+// Heavy 3D + physics chunk — loaded only when a crash is launched.
+const CrashSim3D = lazy(() => import('../../components/crash/CrashSim3D'));
 
 type Mode = 'select' | 'running' | 'report';
 
@@ -127,12 +129,16 @@ export function TestScreen() {
       </div>
 
       {mode === 'running' && result && (
-        <CrashStage
-          build={build}
-          scenario={scenario}
-          result={result}
-          onComplete={() => setMode('report')}
-        />
+        <Suspense fallback={<div className="sim3d-fallback">Loading simulator…</div>}>
+          <CrashSim3D
+            build={build}
+            stats={stats}
+            scenario={scenario}
+            config={config}
+            result={result}
+            onComplete={() => setMode('report')}
+          />
+        </Suspense>
       )}
       {mode === 'report' && result && (
         <CrashReport

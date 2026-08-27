@@ -23,12 +23,12 @@ Design notes for the codebase. Read alongside `PROJECT_STATE.md`.
 - **Zustand** for state — minimal boilerplate, selector-based subscriptions to
   avoid needless re-renders (important for the live builder), `persist`
   middleware for localStorage.
-- **Rapier2D** (`@dimforge/rapier2d-compat`, WASM) chosen for the physics phase:
-  deterministic, fast on mobile, 2D is enough for a side/top crash view and far
-  cheaper than 3D deformable bodies. *(Installed, not yet wired.)*
-- **Rendering**: stylized **2.5D SVG** side-profile (`VehicleSilhouette`) rather
-  than 3D assets — impressive, tiny, and performant. The live crash view will
-  move to a `<canvas>` driven by Rapier.
+- **Three.js + Rapier3D** (`@dimforge/rapier3d-compat`, WASM) power the crash
+  view: full 3D, deterministic, **lazy-loaded** so the app shell never pays for
+  them until the user hits Crash.
+- **Rendering**: stylized **2.5D SVG** side-profile (`VehicleSilhouette`) for
+  garage/builder/lab thumbnails (tiny, instant); the live crash is a real
+  **3D WebGL** scene playing a pre-baked physics recording.
 
 ## Directory map
 
@@ -46,7 +46,7 @@ src/
                               (each with its own .css)
   components/
     vehicle/                  VehicleSilhouette + silhouetteProfiles (data)
-    crash/                    CrashStage (cinematic), CrashReport
+    crash/                    CrashSim3D (Three.js playback), CrashReport
   game/                       ← framework-agnostic core
     parts/
       types.ts                Part / PartEffects / Platform / VehicleBuild types
@@ -56,6 +56,7 @@ src/
       deriveStats.ts          Build → VehicleStats (the stat engine)
     scenarios/scenarios.ts    Scenario defs + params + ScenarioConfig
     crash/crashModel.ts       Analytical crash → CrashResult (scored outcome)
+    sim/crashSim.ts           Rapier3D pre-simulation → baked SimRecording
   lib/format.ts               Display formatters + rating colors
 ```
 
@@ -89,16 +90,26 @@ inside a physics worker.
   sim should either produce this or be reconciled against it so the *scored*
   result stays deterministic and authoritative.
 
-## Physics plan (Phase 5, next)
+## Physics (Phase 5 — implemented)
 
-- Fixed timestep (e.g. 1/120s), accumulator loop, seeded RNG for random events.
-- Bodies: chassis (box compound), 2 wheels (revolute + suspension via
-  spring/prismatic), barrier/other vehicles per scenario `kind`.
-- Map `VehicleStats` → Rapier params (mass, CoG offset, wheel grip → friction,
-  suspension stiffness/travel, downforce as speed² force).
-- Record per-step transforms into a buffer → scrubbable replay + slow-mo.
-- Derive *visual* deformation from impulse at contact points; keep
-  `crashModel.ts` (or a reconciled version) as the scored truth.
+`crashSim.ts` **pre-simulates the whole crash once** and bakes transforms:
+
+- Fixed 1/120 s timestep. Chassis built from `VehicleStats` with explicit mass,
+  CoG height (via `setAdditionalMassProperties`) and box inertia; wheels welded
+  as cylinder colliders; ground + scenario props (barrier/ramp/curb/opponents).
+- Each scenario `kind` gets its own body layout & initial velocities.
+- Every tracked body's transform is written to a `Float32Array`
+  (`frameCount × bodies × 7`). The renderer replays that array — so **scrubbing,
+  slow-mo and replay never re-simulate** and are identical every time (baked
+  frames make this true regardless of Rapier's own determinism).
+- Impact is detected by peak chassis deceleration between frames.
+- `crashModel.ts` stays the **scored truth**; the sim is fed the same impact
+  speed so visuals and report agree. Reconciling the sim's measured `peakAccelG`
+  into the score is a future refinement.
+
+**Why pre-bake instead of live-stepping?** It decouples physics cost from render
+FPS, makes the timeline trivially scrubbable, guarantees deterministic replays,
+and keeps the door open to moving the sim into a Web Worker unchanged.
 
 ## Conventions
 

@@ -124,6 +124,18 @@
 }
 .test-crash-btn:disabled { opacity: 0.4; box-shadow: none; }
 
+.sim3d-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  background: #0a0f16;
+  color: var(--c-text-dim);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+}
+
 .test-empty {
   height: 60vh;
   display: flex;
