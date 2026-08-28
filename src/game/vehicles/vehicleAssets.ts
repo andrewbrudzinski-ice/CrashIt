@@ -45,12 +45,12 @@ export const VEHICLE_BY_ID: Record<string, VehicleDef> = Object.fromEntries(VEHI
 export const CHASSIS_VEHICLE: Record<string, string> = {
   'chassis.compact': 'metro',
   'chassis.sedan': 'aria',
-  'chassis.coupe': 'falcon',
+  'chassis.coupe': 'vortex',
   'chassis.suv': 'atlas',
   'chassis.truck': 'titan',
   'chassis.van': 'transit',
   'chassis.semi': 'titan',
-  'chassis.monocoque': 'vortex',
+  'chassis.monocoque': 'falcon',
 };
 
 export function vehicleForChassis(chassisId?: string): VehicleDef {

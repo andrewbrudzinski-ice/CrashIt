@@ -42,6 +42,12 @@ and driven by the unchanged physics. New pipeline:
 Verified in-showroom (all 7 distinct, paint recolour working) and in an actual
 crash (blue sedan intact + SUV crumpling into the barrier with debris).
 
+Also propagated the real cars into the **Builder**: `VehiclePreview3D` renders
+the actual GLB (recoloured live to the build's paint, gently spinning, contact
+shadow) as the build hero, so "what you build" is "what you crash". Retuned the
+chassis→vehicle map so coupe → Vortex (low sport) and monocoque → Falcon (race).
+Garage cards keep the cheap 2D silhouette.
+
 ## Previous status: END OF SESSION 15
 
 **Session 15 — vehicle system rebuilt from the ground up (in progress).** The

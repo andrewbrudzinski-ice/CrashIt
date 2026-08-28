@@ -10,7 +10,7 @@ import {
 import { deriveStats, type VehicleStats } from '../../game/vehicle/deriveStats';
 import { BUILD_BUDGET, PAINT_COLORS } from '../../game/vehicle/vehicleModel';
 import { getChallenge, PART_UNLOCK_SOURCE } from '../../game/challenges/challenges';
-import { VehicleSilhouette } from '../../components/vehicle/VehicleSilhouette';
+import { VehiclePreview3D } from '../../components/vehicle/VehiclePreview3D';
 import { fmt, money, signed } from '../../lib/format';
 import './builder.css';
 
@@ -121,7 +121,9 @@ export function BuilderScreen() {
 
       {/* Preview */}
       <div className="builder-preview blueprint-grid">
-        <VehicleSilhouette build={build} rideHeight={stats.rideHeight} showGuides />
+        <div className="builder-preview-stage">
+          <VehiclePreview3D build={build} />
+        </div>
         <div className="builder-colors">
           {PAINT_COLORS.map((c) => (
             <button
