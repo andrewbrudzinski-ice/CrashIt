@@ -15,7 +15,23 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 16
+## Current status: END OF SESSION 17
+
+**Session 17 — swapped the stylized Kenney cars for realistic CC0 models.** The
+Kenney "Car Kit" read as cute/chibi; replaced the whole fleet with **Quaternius
+"Realistic Car Pack" + "Public Transport Pack"** (CC0, converted OBJ→GLB with
+`obj2gltf`, license shipped). These have believable automotive proportions
+(long hoods, real rooflines, sloped windshields). Fleet: Metro (compact), Aria
+(sedan), Vortex (sports sedan), Falcon S (sports coupe), Atlas (SUV), Transit
+(utility van/ambulance), Interceptor (pursuit sedan), Hauler (bus, for the semi
+chassis). The loader (`vehicleModel3d.ts`) was rewritten for these per-material
+models: each part is its own flat material, so **paint recolours the body
+material directly** (no atlas surgery — glass/lights/trim untouched), materials
+upgraded to PBR, and **deformation crushes every body-panel mesh** + splays the
+wheels. Verified realistic cars in the showroom, the Builder hero preview, and a
+live SUV crumpling into the barrier. Kenney assets removed.
+
+## Previous status: END OF SESSION 16
 
 **Session 16 — vehicles are now real GLB assets, not procedural geometry.**
 Per the user's call, the from-scratch procedural car modelling was abandoned and

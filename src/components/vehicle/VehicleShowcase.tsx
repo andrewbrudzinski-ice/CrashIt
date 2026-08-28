@@ -131,8 +131,8 @@ export function VehicleShowcase() {
       if (loadedRef.current) scene.remove(loadedRef.current.group);
       loadedRef.current = veh;
       scene.add(veh.group);
-      orbit.current.target.set(0, targetLength * 0.13, 0);
-      orbit.current.radius = targetLength * 2.4;
+      orbit.current.target.set(0, targetLength * 0.16, 0);
+      orbit.current.radius = targetLength * 2.9;
       veh.deform(dmgMap(cfg.current.damage), 1);
       setLoading(false);
     }).catch(() => { if (!cancelled) setLoading(false); });
