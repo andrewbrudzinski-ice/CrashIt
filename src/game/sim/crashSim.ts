@@ -214,8 +214,9 @@ function assemble(world: RAPIER.World, stats: VehicleStats, cfg: ScenarioConfig,
     return rb;
   };
   const addCar = (id: string, x: number, z: number, mass: number, vel: { x: number; y: number; z: number }, color: string) => {
-    const rb = dynamicCar(world, x, rideY, z, 1.2, 0.6, 0.9, mass, vel);
-    tracked.push({ def: { id, kind: 'car', size: [2.4, 1.2, 1.8], color }, rb });
+    // Full-size opponents (~3.8 m) so they read at the same scale as the player.
+    const rb = dynamicCar(world, x, rideY, z, 1.9, 0.6, 0.925, mass, vel);
+    tracked.push({ def: { id, kind: 'car', size: [3.8, 1.2, 1.85], color }, rb });
   };
 
   switch (kind) {
@@ -247,7 +248,7 @@ function assemble(world: RAPIER.World, stats: VehicleStats, cfg: ScenarioConfig,
     case 'multicar': {
       addChassis({ x: -7, y: rideY, z: 0 }, { x: impactMs, y: 0, z: 0 });
       const cars = Math.round(cfg.params.cars ?? 3);
-      for (let i = 0; i < cars - 1; i++) addCar(`car${i}`, 2 + i * 2.6, 0, 1400, { x: 0, y: 0, z: 0 }, i % 2 ? '#2980b9' : '#c0392b');
+      for (let i = 0; i < cars - 1; i++) addCar(`car${i}`, 3 + i * 4.4, 0, 1400, { x: 0, y: 0, z: 0 }, i % 2 ? '#2980b9' : '#c0392b');
       break;
     }
     case 'offset':

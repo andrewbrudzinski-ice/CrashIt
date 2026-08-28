@@ -166,10 +166,18 @@ export default function CrashSim3D({ build, stats, scenario, config, result, onC
       const bodyGroups: THREE.Group[] = [];
       let chassisDeform: ((d: typeof result.damage, t: number) => void) | null = null;
       const chassisDef = vehicleForChassis(build.parts.chassis);
+      // Give traffic variety: different models & colours per opponent (deterministic).
+      const OPP_MODELS = ['aria', 'metro', 'vortex', 'interceptor', 'titan', 'falcon'];
+      const OPP_COLORS = ['#c0392b', '#2980b9', '#27ae60', '#e6a817', '#8e44ad', '#c8ccd2', '#e67e22'];
+      let oppIdx = 0;
       for (const b of rec.bodies) {
         const [L, H] = b.size;
-        const def = b.kind === 'chassis' ? chassisDef : vehicleById('aria');
-        const paint = b.kind === 'chassis' ? build.color : (b.color ?? '#c0392b');
+        let def = chassisDef, paint = build.color;
+        if (b.kind !== 'chassis') {
+          def = vehicleById(OPP_MODELS[oppIdx % OPP_MODELS.length]);
+          paint = OPP_COLORS[oppIdx % OPP_COLORS.length];
+          oppIdx++;
+        }
         const veh = await loadVehicleModel(def, { paint, targetLength: L, groundY: -H * 0.5 });
         if (disposed) return;
         if (b.kind === 'chassis') chassisDeform = veh.deform;
