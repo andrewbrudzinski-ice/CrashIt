@@ -33,11 +33,12 @@
   align-items: center;
 }
 .test-vehicle-thumb {
+  position: relative;
   flex: 0 0 42%;
+  height: 96px;
   border-radius: var(--r-md);
   overflow: hidden;
   background: var(--c-surface-2);
-  padding: 4px;
 }
 .test-vehicle-info { display: flex; flex-direction: column; gap: 3px; }
 .test-vehicle-name { font-size: 16px; font-weight: 700; }

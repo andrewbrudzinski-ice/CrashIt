@@ -13,7 +13,7 @@ import { getChallenge, evaluateChallenge, type ChallengeEval } from '../../game/
 import { CONDITIONS, getCondition } from '../../game/scenarios/conditions';
 import { computePayout } from '../../game/economy/payout';
 import { audio } from '../../game/audio/audio';
-import { VehicleSilhouette } from '../../components/vehicle/VehicleSilhouette';
+import { VehiclePreview3D } from '../../components/vehicle/VehiclePreview3D';
 import { CrashReport } from '../../components/crash/CrashReport';
 import { ChallengeResult } from '../../components/crash/ChallengeResult';
 import './test.css';
@@ -147,7 +147,7 @@ export function TestScreen() {
         {/* Vehicle chip */}
         <div className="card test-vehicle">
           <div className="test-vehicle-thumb blueprint-grid">
-            <VehicleSilhouette build={build} rideHeight={stats.rideHeight} />
+            <VehiclePreview3D build={build} />
           </div>
           <div className="test-vehicle-info">
             <span className="test-vehicle-name">{build.name}</span>
