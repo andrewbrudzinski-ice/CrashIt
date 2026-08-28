@@ -99,6 +99,7 @@ export async function loadVehicleModel(def: VehicleDef, opts: LoadOpts): Promise
   // ---- Materials: clone once per source material, upgrade to PBR, classify. ----
   const matClones = new Map<string, THREE.MeshStandardMaterial>();
   const areaByMat = new Map<string, number>();
+  const bodyMeshByMat = new Map<string, { mesh: THREE.Mesh; area: number }>();
   const bodyMeshes: THREE.Mesh[] = [];
   const wheelRoots = new Set<THREE.Object3D>();
 
@@ -136,16 +137,29 @@ export async function loadVehicleModel(def: VehicleDef, opts: LoadOpts): Promise
       bodyMeshes.push(mesh);
       const maxCh = Math.max(m.color.r, m.color.g, m.color.b);
       if (!isGlassMat(m) && !isLightMat(m) && maxCh >= 0.12) {
-        areaByMat.set(src.uuid, (areaByMat.get(src.uuid) ?? 0) + triAreaSum(mesh.geometry as THREE.BufferGeometry));
+        const area = triAreaSum(mesh.geometry as THREE.BufferGeometry);
+        areaByMat.set(src.uuid, (areaByMat.get(src.uuid) ?? 0) + area);
+        const prev = bodyMeshByMat.get(src.uuid);
+        if (!prev || area > prev.area) bodyMeshByMat.set(src.uuid, { mesh, area });
       }
     }
   });
 
-  // Body paint = the largest-area eligible material.
+  // Body paint = the largest-area eligible material (+ the mesh that carries it).
   let bodyMat: THREE.MeshStandardMaterial | null = null;
+  let bodyMesh: THREE.Mesh | null = null;
   let bestArea = -1;
-  for (const [uuid, area] of areaByMat) if (area > bestArea) { bestArea = area; bodyMat = matClones.get(uuid) ?? null; }
-  if (bodyMat && opts.paint) bodyMat.color.set(opts.paint);
+  for (const [uuid, area] of areaByMat) if (area > bestArea) {
+    bestArea = area; bodyMat = matClones.get(uuid) ?? null; bodyMesh = bodyMeshByMat.get(uuid)?.mesh ?? null;
+  }
+  // Force glossy paint on the body material (it may be shared with wheels on
+  // atlas-textured models and have been classified as tyre).
+  if (bodyMat) { bodyMat.roughness = 0.46; bodyMat.metalness = 0.4; bodyMat.envMapIntensity = 1.0; }
+  // Two recolour strategies: flat per-material models set the body colour; atlas-
+  // textured models repaint just the body swatch so glass/lights/tyres survive.
+  const atlasRepaint = bodyMat && bodyMat.map ? buildAtlasRepainter(bodyMat, bodyMesh) : null;
+  const applyPaint = (hex: string) => { if (atlasRepaint) atlasRepaint(hex); else bodyMat?.color.set(hex); };
+  if (opts.paint) applyPaint(opts.paint);
 
   const dims = { length: size.x, width: size.z, height: size.y };
 
@@ -189,7 +203,87 @@ export async function loadVehicleModel(def: VehicleDef, opts: LoadOpts): Promise
     });
   };
 
-  const setPaint = (hex: string) => { if (bodyMat) bodyMat.color.set(hex); };
+  return { group, deform, setPaint: applyPaint, dims };
+}
 
-  return { group, deform, setPaint, dims };
+/**
+ * Atlas-texture recolour: for models whose body colour lives in a shared texture
+ * atlas, detect the body's paint swatch by surface area (glass/tyres are small or
+ * near-black) and repaint just those pixels in a cloned atlas.
+ */
+function buildAtlasRepainter(bodyMat: THREE.MeshStandardMaterial, bodyMesh: THREE.Mesh | null): ((hex: string) => void) | null {
+  if (!bodyMesh || !bodyMat.map || !bodyMat.map.image) return null;
+  const img = bodyMat.map.image as HTMLImageElement | HTMLCanvasElement;
+  const w = (img as HTMLImageElement).naturalWidth || img.width;
+  const h = (img as HTMLImageElement).naturalHeight || img.height;
+  if (!w || !h) return null;
+  const scratch = document.createElement('canvas');
+  scratch.width = w; scratch.height = h;
+  const sctx = scratch.getContext('2d')!;
+  sctx.drawImage(img as CanvasImageSource, 0, 0, w, h);
+  let base: ImageData;
+  try { base = sctx.getImageData(0, 0, w, h); } catch { return null; }
+
+  const map = bodyMat.map;
+  const geom = bodyMesh.geometry;
+  const pos = geom.attributes.position as THREE.BufferAttribute;
+  const uv = geom.attributes.uv as THREE.BufferAttribute | undefined;
+  if (!uv) return null;
+  const idx = geom.index;
+  const pixel = (u: number, v: number): number => {
+    let x = u * map.repeat.x + map.offset.x, y = v * map.repeat.y + map.offset.y;
+    x = ((x % 1) + 1) % 1; y = ((y % 1) + 1) % 1;
+    const px = Math.min(w - 1, Math.max(0, Math.floor(x * w)));
+    const yy = map.flipY ? (1 - y) : y;
+    const py = Math.min(h - 1, Math.max(0, Math.floor(yy * h)));
+    return (py * w + px) * 4;
+  };
+  type B = { area: number; r: number; g: number; b: number };
+  const buckets = new Map<string, B>();
+  let total = 0;
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), ab = new THREE.Vector3(), ac = new THREE.Vector3();
+  const tris = (idx ? idx.count : pos.count) / 3;
+  for (let f = 0; f < tris; f++) {
+    const i0 = idx ? idx.getX(f * 3) : f * 3, i1 = idx ? idx.getX(f * 3 + 1) : f * 3 + 1, i2 = idx ? idx.getX(f * 3 + 2) : f * 3 + 2;
+    a.fromBufferAttribute(pos, i0); b.fromBufferAttribute(pos, i1); c.fromBufferAttribute(pos, i2);
+    const area = ab.subVectors(b, a).cross(ac.subVectors(c, a)).length() * 0.5;
+    const i = pixel((uv.getX(i0) + uv.getX(i1) + uv.getX(i2)) / 3, (uv.getY(i0) + uv.getY(i1) + uv.getY(i2)) / 3);
+    const r = base.data[i], g = base.data[i + 1], bl = base.data[i + 2];
+    const key = `${r >> 4},${g >> 4},${bl >> 4}`;
+    const bk = buckets.get(key) ?? { area: 0, r, g, b: bl };
+    bk.area += area; buckets.set(key, bk);
+    total += area;
+  }
+  const sat = (r: number, g: number, bl: number) => { const mx = Math.max(r, g, bl); return mx === 0 ? 0 : (mx - Math.min(r, g, bl)) / mx; };
+  let bases: [number, number, number][] = [];
+  for (const bk of buckets.values()) {
+    if (bk.area / total < 0.05) continue;
+    const lum = Math.max(bk.r, bk.g, bk.b) / 255;
+    if (sat(bk.r, bk.g, bk.b) > 0.3 && lum > 0.2 && lum < 0.95) bases.push([bk.r, bk.g, bk.b]);
+  }
+  if (!bases.length) { const big = [...buckets.values()].sort((x, y) => y.area - x.area)[0]; if (big) bases = [[big.r, big.g, big.b]]; }
+  if (!bases.length) return null;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+  const target = new THREE.Color();
+  return (hex: string) => {
+    target.set(hex);
+    const tr = Math.round(target.r * 255), tg = Math.round(target.g * 255), tb = Math.round(target.b * 255);
+    const out = ctx.createImageData(w, h);
+    const s = base.data, o = out.data;
+    for (let i = 0; i < s.length; i += 4) {
+      let hit = false;
+      for (const [pr, pg, pb] of bases) { const dr = s[i] - pr, dg = s[i + 1] - pg, db = s[i + 2] - pb; if (dr * dr + dg * dg + db * db < 700) { hit = true; break; } }
+      if (hit) { o[i] = tr; o[i + 1] = tg; o[i + 2] = tb; } else { o[i] = s[i]; o[i + 1] = s[i + 1]; o[i + 2] = s[i + 2]; }
+      o[i + 3] = s[i + 3];
+    }
+    ctx.putImageData(out, 0, 0);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.flipY = map.flipY; tex.colorSpace = map.colorSpace; tex.wrapS = map.wrapS; tex.wrapT = map.wrapT;
+    tex.offset.copy(map.offset); tex.repeat.copy(map.repeat); tex.center.copy(map.center); tex.rotation = map.rotation;
+    bodyMat.map = tex;
+    bodyMat.needsUpdate = true;
+  };
 }

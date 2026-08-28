@@ -15,7 +15,20 @@ real-time crash simulation (lazy-loaded chunk). No backend yet.
 
 ---
 
-## Current status: END OF SESSION 17
+## Current status: END OF SESSION 18
+
+**Session 18 — added a realistic pickup to complete the fleet.** The Realistic
+Car Pack had no pickup, so sourced **Vehicle_Pickup** from Quaternius' CC0
+"Zombie Apocalypse Kit" (fetched just that one glTF by Drive file id via gdown,
+packed to GLB with gltf-pipeline). `chassis.truck` now maps to a real pickup
+(Titan) with an open cargo bed. That newer Quaternius pack uses a shared
+**texture atlas** rather than flat per-material colours, so the loader now
+supports **both recolour strategies**: flat models set the body material colour;
+atlas-textured models repaint only the body swatch (area-weighted detection) so
+glass/lights/tyres survive. Verified the pickup and a flat-material sedan both
+recolour correctly.
+
+## Previous status: END OF SESSION 17
 
 **Session 17 — swapped the stylized Kenney cars for realistic CC0 models.** The
 Kenney "Car Kit" read as cute/chibi; replaced the whole fleet with **Quaternius
