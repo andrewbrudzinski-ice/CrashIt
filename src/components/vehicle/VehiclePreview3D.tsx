@@ -100,7 +100,7 @@ export function VehiclePreview3D({ build, className }: { build: VehicleBuild; cl
     let cancelled = false;
     const def = vehicleForChassis(chassis);
     const targetLength = LEN[def.category] ?? 4.6;
-    loadVehicleModel(def, { paint: color, targetLength, groundY: -targetLength * 0.115 }).then((veh) => {
+    loadVehicleModel(def, { paint: color, targetLength, groundY: 0 }).then((veh) => {
       if (cancelled) return;
       const spin = spinRef.current!;
       if (loadedRef.current) spin.remove(loadedRef.current.group);

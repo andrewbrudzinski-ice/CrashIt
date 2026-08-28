@@ -125,7 +125,7 @@ export function VehicleShowcase() {
     setLoading(true);
     const def = VEHICLES[vehIdx];
     const targetLength = LEN[def.category] ?? 4.6;
-    loadVehicleModel(def, { paint: COLORS[colorIdx].hex, targetLength, groundY: -targetLength * 0.115 }).then((veh) => {
+    loadVehicleModel(def, { paint: COLORS[colorIdx].hex, targetLength, groundY: 0 }).then((veh) => {
       if (cancelled) { veh.group.traverse((o) => { const m = o as THREE.Mesh; if (m.geometry) m.geometry.dispose(); }); return; }
       const scene = sceneRef.current!;
       if (loadedRef.current) scene.remove(loadedRef.current.group);
